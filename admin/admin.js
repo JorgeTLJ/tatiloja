@@ -9,8 +9,8 @@ try { token = localStorage.getItem('tatiloja.token') || ''; } catch (e) {}
 
 /* ---------- GitHub ---------- */
 async function gh(path, opts = {}) {
-  const r = await fetch('https://api.github.com/repos/' + REPO + path, {
-    ...opts, cache: 'no-store',
+  const r = await fetch('https://api.github.com/repos/' + (opts.repo || REPO) + path, {
+    method: opts.method, body: opts.body, cache: 'no-store',
     headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) },
   });
   if (!r.ok) { const e = new Error('GitHub ' + r.status); e.status = r.status; try { e.body = await r.json(); } catch (_) {} throw e; }
@@ -18,8 +18,8 @@ async function gh(path, opts = {}) {
 }
 const toB64 = str => { const b = new TextEncoder().encode(str); let s = ''; b.forEach(c => s += String.fromCharCode(c)); return btoa(s); };
 const fromB64 = b64 => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g, '')), c => c.charCodeAt(0)));
-const put = (path, b64, message, shaOld) => gh('/contents/' + path, {
-  method: 'PUT', body: JSON.stringify({ message, content: b64, branch: BRANCH, ...(shaOld ? { sha: shaOld } : {}) }),
+const put = (path, b64, message, shaOld, repo) => gh('/contents/' + path, {
+  repo, method: 'PUT', body: JSON.stringify({ message, content: b64, ...(repo ? {} : { branch: BRANCH }), ...(shaOld ? { sha: shaOld } : {}) }),
 });
 
 async function load() {
@@ -148,7 +148,7 @@ $('#saveBtn').addEventListener('click', async () => {
     status('Salvando produtos…');
     const body = { settings: data.settings, products: data.products };
     const r = await put(DATA_PATH, toB64(JSON.stringify(body, null, 2) + '\n'), 'Painel: atualiza produtos e dados da loja', sha);
-    sha = r.content.sha; setDirty(false); render();
+    sha = r.content.sha; setDirty(false); render(); if (window.onCatalogChange) window.onCatalogChange();
     status('Publicado! O site atualiza em cerca de 1 minuto.', 'ok');
   } catch (err) {
     btn.disabled = false;
@@ -167,6 +167,7 @@ async function enter() {
     return;
   }
   $('#login').hidden = true; $('#app').hidden = false; $('#logout').hidden = false; $('#loginErr').textContent = ''; render();
+  if (window.afterLogin) window.afterLogin();
 }
 $('#loginForm').addEventListener('submit', e => {
   e.preventDefault(); token = $('#tok').value.trim(); if (!token) return;

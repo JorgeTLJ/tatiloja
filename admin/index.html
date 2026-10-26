@@ -43,6 +43,28 @@
   </section>
 
   <section id="app" hidden>
+    <nav class="tabs" role="tablist" aria-label="Seções do painel">
+      <button role="tab" id="tb-resumo" data-tab="resumo" aria-selected="true" type="button">Resumo</button>
+      <button role="tab" id="tb-vendas" data-tab="vendas" aria-selected="false" type="button">Vendas</button>
+      <button role="tab" id="tb-produtos" data-tab="produtos" aria-selected="false" type="button">Produtos</button>
+    </nav>
+
+    <div id="tabResumo" class="tab" role="tabpanel" aria-labelledby="tb-resumo">
+      <div class="bar"><h1>Resumo</h1><span class="grow"></span>
+        <div class="chips" id="periodChips" role="group" aria-label="Período"></div></div>
+      <div id="resumoBody"></div>
+    </div>
+
+    <div id="tabVendas" class="tab" role="tabpanel" aria-labelledby="tb-vendas" hidden>
+      <div class="bar"><h1>Vendas</h1><span class="grow"></span>
+        <button class="btn ghost sm" id="csvBtn" type="button">Exportar planilha</button>
+        <button class="btn" id="saleAdd" type="button">+ Registrar venda</button></div>
+      <p id="vstatus" class="status" role="status"></p>
+      <div id="vendasBody"></div>
+    </div>
+
+    <div id="tabProdutos" class="tab" role="tabpanel" aria-labelledby="tb-produtos" hidden>
+
     <div class="bar">
       <h1>Produtos</h1>
       <span class="grow"></span>
@@ -62,6 +84,8 @@
 
     <ul id="list" class="plist"></ul>
     <p id="empty" class="muted" hidden>Nenhum produto ainda. Clique em “Novo produto”.</p>
+  
+    </div>
   </section>
 </main>
 
@@ -90,6 +114,29 @@
   </form>
 </div>
 
+
+<div class="layer" id="saleLayer" hidden>
+  <div class="scrim" data-sclose></div>
+  <form class="sheet esheet" id="saleForm" novalidate>
+    <div class="row"><h2 id="saleTitle">Registrar venda</h2><span class="grow"></span><button class="x" type="button" data-sclose aria-label="Fechar">×</button></div>
+    <div class="grid2">
+      <div><label class="lbl" for="sDate">Data</label><input id="sDate" type="date" required></div>
+      <div><label class="lbl" for="sStatus">Situação</label><select id="sStatus"><option value="pago">Paga</option><option value="pendente">Aguardando pagamento</option><option value="cancelado">Cancelada</option></select></div>
+      <div class="full"><span class="lbl">Peças</span><div id="sItems" class="sitems"></div><button class="btn ghost sm" id="sAddItem" type="button">+ Outra peça</button></div>
+      <div><label class="lbl" for="sDisc">Desconto (R$)</label><input id="sDisc" inputmode="decimal" placeholder="0,00"></div>
+      <div><label class="lbl" for="sFrete">Frete cobrado (R$)</label><input id="sFrete" inputmode="decimal" placeholder="0,00"></div>
+      <div><label class="lbl" for="sPay">Pagamento</label><select id="sPay"><option>Pix</option><option>Cartão</option><option>Mercado Pago</option><option>Dinheiro</option><option>Outro</option></select></div>
+      <div><label class="lbl" for="sCanal">Onde vendeu</label><select id="sCanal"><option>WhatsApp</option><option>Loja física</option><option>Instagram</option><option>Site</option><option>Outro</option></select></div>
+      <div class="full"><label class="lbl" for="sCli">Cliente (opcional)</label><input id="sCli" placeholder="Nome"></div>
+      <div class="full"><label class="lbl" for="sObs">Observação (opcional)</label><input id="sObs"></div>
+    </div>
+    <p class="total" id="sTotal" aria-live="polite"></p>
+    <p class="err" id="saleErr" role="alert"></p>
+    <div class="row end"><button class="btn ghost" type="button" data-sclose>Cancelar</button><button class="btn" type="submit" id="saleSave">Salvar venda</button></div>
+  </form>
+</div>
+
 <script src="admin.js"></script>
+<script src="vendas.js"></script>
 </body>
 </html>
