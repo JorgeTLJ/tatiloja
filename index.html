@@ -1,0 +1,157 @@
+<title>Tati Loja — moda feminina e semijoias</title>
+<meta name="description" content="Catálogo da Tati Loja: roupas femininas, acessórios, sapatos e semijoias. Peça pelo WhatsApp.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+
+<div class="strip"><div class="in"><span>Frete PAC e SEDEX para todo o Brasil</span><span>Pagamento pelo Mercado Pago</span><span>Atendimento pelo WhatsApp</span></div></div>
+
+<header class="top">
+  <div class="in">
+    <a class="brand" href="#topo"><b>Tati Loja</b><small>Moda feminina</small></a>
+    <nav aria-label="Principal">
+      <a href="#catalogo">Catálogo</a>
+      <a href="#semijoias">Semijoias</a>
+    </nav>
+    <button class="bag" id="bagBtn" type="button" aria-haspopup="dialog">Sacola <span class="n" id="bagCount">0</span></button>
+  </div>
+</header>
+
+<main id="topo">
+  <section class="hero">
+    <div class="in">
+      <div class="hero-copy">
+        <p class="eyebrow">Roupas e semijoias</p>
+        <h1>Moda feminina com a <em>elegância</em> do dia a dia</h1>
+        <p class="lead">Escolha suas peças, monte a sacola e finalize pelo WhatsApp. O pagamento é feito pelo Mercado Pago, em Pix ou cartão, e o envio sai por PAC ou SEDEX.</p>
+        <div class="hero-cta">
+          <a class="btn" href="#catalogo">Ver o catálogo</a>
+          <a class="btn ghost" id="heroWhats" href="https://wa.me/" target="_blank" rel="noopener">Falar no WhatsApp</a>
+        </div>
+      </div>
+      <div class="hero-logo"><img id="logoImg" alt="Tati Loja: silhueta feminina com colar dourado" width="480" height="600"></div>
+    </div>
+  </section>
+
+  <section id="catalogo">
+    <div class="in">
+      <div class="sec-head">
+        <h2>Catálogo</h2>
+        <span class="count" id="count" aria-live="polite"></span>
+      </div>
+      <div class="tools">
+        <div class="chips" id="chips" role="group" aria-label="Categorias"></div>
+        <label class="sort" for="sort">Ordenar
+          <select id="sort">
+            <option value="new">Novidades</option>
+            <option value="asc">Menor preço</option>
+            <option value="desc">Maior preço</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section class="jewel" id="semijoias">
+    <div class="in">
+      <div class="txt">
+        <p class="eyebrow">Semijoias</p>
+        <h2>Brilho para completar o look</h2>
+        <p>As semijoias da Tati Loja estão chegando ao catálogo. Quer ver as peças que já temos na loja? Chame no WhatsApp que enviamos as fotos e os valores.</p>
+      </div>
+      <a class="btn" id="jewelWhats" href="https://wa.me/" target="_blank" rel="noopener">Ver semijoias no WhatsApp</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="in">
+    <div>
+      <p class="logo">Tati Loja</p>
+      <p>Moda feminina e semijoias.</p>
+    </div>
+    <div>
+      <h4>Pagamento</h4>
+      <p>Mercado Pago, em Pix ou cartão. Enviamos o link de pagamento no WhatsApp com o valor final do pedido.</p>
+    </div>
+    <div>
+      <h4>Entrega</h4>
+      <p>PAC ou SEDEX, com o frete calculado pelo seu CEP e confirmado no WhatsApp.</p>
+    </div>
+    <p class="legal">© 2026 Tati Loja. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<!-- Produto -->
+<div class="layer" id="productLayer" hidden>
+  <div class="scrim" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pTitle">
+    <button class="close" type="button" data-close aria-label="Fechar">×</button>
+    <div class="pm">
+      <div class="pic"><img id="pImg" alt=""></div>
+      <div class="body">
+        <p class="pcat" id="pCat"></p>
+        <h3 id="pTitle"></h3>
+        <p class="pprice" id="pPrice"></p>
+        <p class="pdesc" id="pDesc"></p>
+        <div>
+          <p class="field-label"><span>Tamanho</span></p>
+          <div class="sizes" id="pSizes" role="radiogroup" aria-label="Tamanho"></div>
+          <p class="msg-error" id="pError" role="alert"></p>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button" id="pAdd">Adicionar à sacola</button>
+          <a class="btn ghost" id="pWhats" href="https://wa.me/" target="_blank" rel="noopener" aria-disabled="true">Pedir só esta peça pelo WhatsApp</a>
+        </div>
+        <p class="note">Você confirma o frete e paga pelo Mercado Pago depois, direto no WhatsApp.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sacola -->
+<div class="layer" id="bagLayer" hidden>
+  <div class="scrim" data-close></div>
+  <aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="bagTitle">
+    <button class="close" type="button" data-close aria-label="Fechar sacola">×</button>
+    <div class="bag-head"><h3 id="bagTitle">Sua sacola</h3></div>
+    <ul class="bag-list" id="bagList"></ul>
+    <div class="bag-empty" id="bagEmpty" hidden>
+      <h4>Sua sacola está vazia</h4>
+      <p>Escolha uma peça do catálogo para começar.</p>
+      <button class="btn ghost" type="button" data-close>Voltar ao catálogo</button>
+    </div>
+    <div class="bag-foot" id="bagFoot">
+      <div class="fields">
+        <div class="full">
+          <label for="fName">Seu nome</label>
+          <input id="fName" type="text" autocomplete="name" placeholder="Como podemos te chamar?">
+        </div>
+        <div>
+          <label for="fShip">Entrega</label>
+          <select id="fShip">
+            <option value="PAC">PAC</option>
+            <option value="SEDEX">SEDEX</option>
+            <option value="Retirar na loja">Retirar na loja</option>
+          </select>
+        </div>
+        <div id="cepBox">
+          <label for="fCep">CEP</label>
+          <input id="fCep" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9">
+        </div>
+      </div>
+      <div class="total"><span>Subtotal</span><b id="subtotal">R$ 0,00</b></div>
+      <p class="note">O frete é somado ao final, no WhatsApp. Lá você recebe o link do Mercado Pago com o valor total.</p>
+      <a class="btn" id="checkout" href="https://wa.me/" target="_blank" rel="noopener">Finalizar pelo WhatsApp</a>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+
