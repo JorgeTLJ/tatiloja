@@ -82,6 +82,19 @@
       </div>
     </div>
 
+    <div class="panel" id="fretePanel">
+      <h2>Entrega e pagamento</h2>
+      <div class="grid2">
+        <div class="full"><label class="lbl" for="sCo">Servidor de pagamento</label><input id="sCo" inputmode="url" placeholder="https://tatiloja-api.seu-nome.workers.dev"><p class="hint">Quando preenchido, o site cobra direto pelo Mercado Pago. Em branco, os pedidos seguem pelo WhatsApp.</p></div>
+        <label class="chk"><input type="checkbox" id="sRet" checked> Permitir retirar na loja (grátis)</label>
+        <div><label class="lbl" for="sFree">Frete grátis acima de (R$)</label><input id="sFree" inputmode="decimal" placeholder="Sem frete grátis"></div>
+      </div>
+      <span class="lbl" style="margin-top:16px">Frete por região</span>
+      <div id="regs" class="regs"></div>
+      <button class="btn ghost sm" id="regAdd" type="button">+ Região</button>
+      <p class="hint">Os valores que vieram preenchidos são só exemplos. Ajuste para o que a loja cobra de verdade.</p>
+    </div>
+
     <ul id="list" class="plist"></ul>
     <p id="empty" class="muted" hidden>Nenhum produto ainda. Clique em “Novo produto”.</p>
   

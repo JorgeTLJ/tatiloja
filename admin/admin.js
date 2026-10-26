@@ -41,7 +41,7 @@ function waShow(v) { const d = String(v || ''); const m = d.replace(/^55/, ''); 
 
 /* ---------- Lista ---------- */
 function render() {
-  $('#sWa').value = waShow(data.settings.whatsapp); $('#sIg').value = data.settings.instagram || '';
+  $('#sWa').value = waShow(data.settings.whatsapp); $('#sIg').value = data.settings.instagram || ''; renderFrete();
   const ul = $('#list'); ul.innerHTML = '';
   $('#empty').hidden = data.products.length > 0;
   data.products.forEach((p, i) => {
@@ -66,6 +66,27 @@ function render() {
     ul.appendChild(li);
   });
 }
+/* Entrega e pagamento */
+const frete = () => (data.settings.frete = data.settings.frete || { retirada: true, gratisAcima: null, regioes: [] });
+function renderFrete() {
+  const f = frete();
+  $('#sCo').value = data.settings.checkoutUrl || ''; $('#sRet').checked = f.retirada !== false; $('#sFree').value = fmtMoney(f.gratisAcima || '');
+  const box = $('#regs'); box.innerHTML = '';
+  (f.regioes = f.regioes || []).forEach((r, i) => {
+    const row = document.createElement('div'); row.className = 'rg';
+    row.innerHTML = '<input class="rn" aria-label="Nome da região" placeholder="Nome (ex.: Sudeste)" value="' + esc(r.nome) + '"><input class="ru" aria-label="Estados" placeholder="Estados: SP, RJ, MG" value="' + esc((r.ufs || []).join(', ')) + '"><input class="rp" aria-label="Preço" inputmode="decimal" placeholder="25,00" value="' + esc(fmtMoney(r.preco)) + '"><button type="button" aria-label="Remover região">×</button>';
+    row.querySelector('.rn').addEventListener('input', e => { r.nome = e.target.value.trim(); setDirty(true); });
+    row.querySelector('.ru').addEventListener('input', e => { r.ufs = e.target.value.split(/[\s,;]+/).map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x)); setDirty(true); });
+    row.querySelector('.rp').addEventListener('input', e => { const n = parseMoney(e.target.value); r.preco = isNaN(n) ? 0 : n; setDirty(true); });
+    row.querySelector('button').addEventListener('click', () => { f.regioes.splice(i, 1); setDirty(true); renderFrete(); });
+    box.appendChild(row);
+  });
+}
+$('#regAdd').addEventListener('click', () => { frete().regioes.push({ nome: '', ufs: [], preco: 0, prazo: '' }); setDirty(true); renderFrete(); });
+$('#sCo').addEventListener('input', e => { data.settings.checkoutUrl = e.target.value.trim().replace(/\/+$/, ''); setDirty(true); });
+$('#sRet').addEventListener('change', e => { frete().retirada = e.target.checked; setDirty(true); });
+$('#sFree').addEventListener('input', e => { const n = parseMoney(e.target.value); frete().gratisAcima = isNaN(n) || n <= 0 ? null : n; setDirty(true); });
+
 $('#sWa').addEventListener('input', e => { data.settings.whatsapp = waDigits(e.target.value); setDirty(true); });
 $('#sIg').addEventListener('input', e => { data.settings.instagram = e.target.value.trim(); setDirty(true); });
 

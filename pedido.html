@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Seu pedido — Tati Loja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.done { max-width: 560px; margin: 0 auto; padding: 56px 20px 72px; text-align: center; }
+.done .mark { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 18px; background: var(--pink-soft); border: 1px solid var(--gold-line); color: var(--gold); font-size: 34px; }
+.done h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(34px, 8vw, 48px); line-height: 1.1; margin: 0 0 12px; }
+.done p { color: var(--muted); margin: 0 0 12px; }
+.done .ref { display: inline-block; margin: 6px 0 20px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-variant-numeric: tabular-nums; }
+.done .actions { display: grid; gap: 10px; margin-top: 18px; }
+.brandline { padding: 18px 20px; text-align: center; font-family: var(--font-display); font-size: 28px; font-weight: 600; color: var(--gold); }
+.brandline a { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="brandline"><a href="./">Tati Loja</a></div>
+<main class="done" id="box" aria-live="polite">
+  <p>Carregando…</p>
+</main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var status = q.get('status') || q.get('collection_status') || '';
+  var ref = q.get('external_reference') || '';
+  var box = document.getElementById('box');
+  var wa = 'https://wa.me/';
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function show(mark, title, text, primary, secondary) {
+    box.innerHTML = '<div class="mark" aria-hidden="true">' + mark + '</div><h1>' + title + '</h1>' + text +
+      (ref ? '<div class="ref">Pedido ' + esc(ref) + '</div>' : '') +
+      '<div class="actions">' + primary + secondary + '</div>';
+  }
+  function render() {
+    var whats = '<a class="btn ghost" href="' + wa + '" target="_blank" rel="noopener" id="wa">Falar com a loja no WhatsApp</a>';
+    var back = '<a class="btn" href="./">Voltar ao catálogo</a>';
+    if (status === 'approved') {
+      try { localStorage.removeItem('tatiloja.sacola'); } catch (e) {}
+      show('✓', 'Pagamento aprovado!', '<p>Obrigada pela compra. Já recebemos o seu pedido e vamos separar as peças com carinho.</p><p>Se tiver qualquer dúvida sobre a entrega ou a retirada, é só chamar a gente.</p>', back, whats);
+    } else if (status === 'pending' || status === 'in_process') {
+      try { localStorage.removeItem('tatiloja.sacola'); } catch (e) {}
+      show('…', 'Estamos aguardando o pagamento', '<p>Assim que o Mercado Pago confirmar, o seu pedido entra na nossa fila. Se você pagou por Pix, a confirmação costuma ser imediata.</p>', back, whats);
+    } else {
+      show('!', 'O pagamento não foi concluído', '<p>Nada foi cobrado. Suas peças continuam na sacola, é só tentar de novo quando quiser.</p>', back, whats);
+    }
+  }
+  render();
+  fetch('data/loja.json?v=' + Date.now()).then(function (r) { return r.json(); }).then(function (d) {
+    var n = String((d.settings && d.settings.whatsapp) || '').replace(/\D/g, '');
+    var a = document.getElementById('wa');
+    if (a && n) a.href = 'https://wa.me/' + n + '?text=' + encodeURIComponent('Olá, Tati Loja! Sobre o meu pedido' + (ref ? ' ' + ref : '') + '.');
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

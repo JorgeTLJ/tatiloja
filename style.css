@@ -214,7 +214,7 @@ footer .logo { font-family: var(--font-display); font-weight: 700; font-size: 30
 .linklike { border: 0; background: transparent; padding: 4px 0; color: var(--muted); font-size: 13px; text-decoration: underline; }
 .bag-empty { padding: 48px 20px; text-align: center; color: var(--muted); }
 .bag-empty h4 { font-family: var(--font-display); font-size: 26px; margin: 0 0 6px; color: var(--ink); font-weight: 600; }
-.bag-foot { border-top: 1px solid var(--line); padding: 16px 20px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; background: var(--bg); }
+.bag-foot { max-height: 68dvh; overflow-y: auto; flex: 0 0 auto; border-top: 1px solid var(--line); padding: 16px 20px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; background: var(--bg); }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .fields .full { grid-column: 1 / -1; }
 .fields label { display: block; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
@@ -246,3 +246,21 @@ footer .logo { font-family: var(--font-display); font-weight: 700; font-size: 30
 
 .old { color: var(--muted); font-size: .65em; font-weight: 500; margin-right: 6px; }
 .card .sold { position: absolute; top: 10px; left: 10px; background: var(--ink); color: var(--bg); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; }
+
+.bag-list { min-height: 110px; }
+.sum { display: flex; justify-content: space-between; color: var(--muted); font-variant-numeric: tabular-nums; }
+.err { color: var(--error); font-size: 14px; margin: 0; min-height: 0; }
+.err:empty { display: none; }
+.note:empty { display: none; }
+.payonly { display: none; }
+.pay-on .payonly { display: block; }
+.pay-on .fields.payonly { display: grid; }
+.pay-on .fields.payonly[hidden], .pay-on .payonly[hidden] { display: none; }
+.pay-on #checkout { background: transparent; color: var(--gold); border: 1px solid var(--gold-line); }
+.pay-on #checkout:hover { background: var(--pink-soft); filter: none; }
+.btn[disabled] { opacity: .6; cursor: wait; filter: none; }
+.btn.sm { padding: 8px 18px; min-height: 40px; }
+.pay-on .btn.payonly { display: inline-flex; }
+.pay-on .sum.payonly { display: flex; }
+.total { display: none; }
+.pay-on .total { display: flex; }

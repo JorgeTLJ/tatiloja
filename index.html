@@ -131,29 +131,49 @@
       <p>Escolha uma peça do catálogo para começar.</p>
       <button class="btn ghost" type="button" data-close>Voltar ao catálogo</button>
     </div>
-    <div class="bag-foot" id="bagFoot">
+    <form class="bag-foot" id="bagFoot" novalidate>
       <div class="fields">
         <div class="full">
           <label for="fName">Seu nome</label>
           <input id="fName" type="text" autocomplete="name" placeholder="Como podemos te chamar?">
         </div>
-        <div>
-          <label for="fShip">Entrega</label>
+        <div class="payonly">
+          <label for="fTel">WhatsApp</label>
+          <input id="fTel" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999">
+        </div>
+        <div class="payonly">
+          <label for="fMail">E-mail</label>
+          <input id="fMail" type="email" autocomplete="email" placeholder="voce@email.com">
+        </div>
+        <div class="full">
+          <label for="fShip">Como quer receber?</label>
           <select id="fShip">
-            <option value="PAC">PAC</option>
-            <option value="SEDEX">SEDEX</option>
-            <option value="Retirar na loja">Retirar na loja</option>
+            <option value="entrega">Receber em casa</option>
+            <option value="retirada">Retirar na loja</option>
           </select>
         </div>
-        <div id="cepBox">
+        <div id="cepBox" class="full">
           <label for="fCep">CEP</label>
           <input id="fCep" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9">
+          <p class="note" id="cepMsg" aria-live="polite"></p>
         </div>
       </div>
-      <div class="total"><span>Subtotal</span><b id="subtotal">R$ 0,00</b></div>
-      <p class="note">O frete é somado ao final, no WhatsApp. Lá você recebe o link do Mercado Pago com o valor total.</p>
+      <div class="fields payonly" id="addrBox" hidden>
+        <div class="full"><label for="fRua">Rua</label><input id="fRua" type="text" autocomplete="address-line1"></div>
+        <div><label for="fNum">Número</label><input id="fNum" type="text" inputmode="numeric" autocomplete="off"></div>
+        <div><label for="fCompl">Complemento</label><input id="fCompl" type="text" autocomplete="address-line2" placeholder="Apto, bloco (opcional)"></div>
+        <div class="full"><label for="fBairro">Bairro</label><input id="fBairro" type="text"></div>
+        <div><label for="fCidade">Cidade</label><input id="fCidade" type="text" autocomplete="address-level2"></div>
+        <div><label for="fUf">Estado (UF)</label><input id="fUf" type="text" maxlength="2" autocomplete="address-level1" style="text-transform:uppercase"></div>
+      </div>
+      <div class="sum"><span>Subtotal</span><span id="subtotal">R$ 0,00</span></div>
+      <div class="sum payonly" id="freteRow"><span>Frete</span><span id="freteVal">—</span></div>
+      <div class="total"><span>Total</span><b id="totalVal">R$ 0,00</b></div>
+      <p class="note" id="coNote"></p>
+      <p class="err" id="coErr" role="alert"></p>
+      <button class="btn payonly" id="payBtn" type="submit">Pagar com Mercado Pago</button>
       <a class="btn" id="checkout" href="https://wa.me/" target="_blank" rel="noopener">Finalizar pelo WhatsApp</a>
-    </div>
+    </form>
   </aside>
 </div>
 

@@ -1,0 +1,20 @@
+name = "tatiloja-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Endereço do site (sem barra no final). Trocar para https://tatiloja.com.br quando o domínio estiver no ar.
+SITE_URL = "https://jorgetlj.github.io/tatiloja"
+# Sites que podem chamar este servidor.
+ALLOWED_ORIGINS = "https://jorgetlj.github.io,https://tatiloja.com.br,https://www.tatiloja.com.br"
+# Repositório privado onde as vendas são gravadas.
+DATA_REPO = "JorgeTLJ/tldados"
+# Máximo de parcelas no cartão.
+MAX_INSTALLMENTS = "6"
+# "1" recusa avisos do Mercado Pago com assinatura inválida (ligar depois de confirmar que funciona).
+STRICT_SIGNATURE = "0"
+
+# Segredos (NÃO ficam aqui; são criados no painel da Cloudflare):
+#   MP_ACCESS_TOKEN     token de produção do Mercado Pago
+#   MP_WEBHOOK_SECRET   chave secreta dos avisos (webhooks) do Mercado Pago
+#   GH_TOKEN            token do GitHub com acesso só ao repositório tldados

@@ -7,6 +7,10 @@ function boot(DATA) {
 const WHATSAPP = (DATA.settings.whatsapp || '').replace(/\D/g, '');
 const PRODUCTS = DATA.products.filter(p => p.visible !== false);
 const SEMIJOIAS = 'Semijoias';
+// Pagamento direto: só liga quando data/loja.json tem settings.checkoutUrl (endereço do servidor de pagamento).
+const PAY_URL = String(DATA.settings.checkoutUrl || '').replace(/\/+$/, '');
+const FRETE = DATA.settings.frete || {};
+if (PAY_URL) document.documentElement.classList.add('pay-on');
 /* ============ UTILIDADES ============ */
 const $ = (s, r = document) => r.querySelector(s);
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -41,10 +45,10 @@ function orderText(items, extra) {
 }
 
 function checkoutText() {
-  const ship = $('#fShip').value, cep = $('#fCep').value.trim(), nome = $('#fName').value.trim();
-  let extra = 'Entrega: ' + ship + (ship !== 'Retirar na loja' && cep ? ' · CEP ' + cep : '');
+  const retira = $('#fShip').value === 'retirada', cep = $('#fCep').value.trim(), nome = $('#fName').value.trim();
+  let extra = 'Entrega: ' + (retira ? 'Retirar na loja' : 'Receber em casa' + (cep ? ' · CEP ' + cep : ''));
   if (nome) extra += '\nNome: ' + nome;
-  extra += ship === 'Retirar na loja'
+  extra += retira
     ? '\n\nPode me enviar o link do Mercado Pago para pagar?'
     : '\n\nPode me enviar o valor do frete e o link do Mercado Pago para pagar?';
   return orderText(bag, extra);
@@ -71,11 +75,39 @@ function renderBag() {
   });
   const empty = n === 0;
   $('#bagEmpty').hidden = !empty; $('#bagFoot').hidden = empty; list.hidden = empty;
-  $('#subtotal').textContent = brl.format(bagTotal());
+  updateCheckout();
+}
+
+/* ============ FRETE E TOTAL ============ */
+const digits = v => String(v || '').replace(/\D/g, '');
+function freteInfo() {
+  if ($('#fShip').value === 'retirada') return { ok: true, valor: 0, regiao: 'Retirar na loja' };
+  const uf = $('#fUf').value.trim().toUpperCase();
+  if (uf.length !== 2) return { ok: false, msg: 'informe o CEP' };
+  const reg = (FRETE.regioes || []).find(r => (r.ufs || []).map(x => String(x).toUpperCase()).includes(uf));
+  if (!reg) return { ok: false, msg: 'não entregamos nesse estado', bloqueia: true };
+  const gratis = !!FRETE.gratisAcima && bagTotal() >= Number(FRETE.gratisAcima);
+  return { ok: true, valor: gratis ? 0 : Number(reg.preco) || 0, regiao: reg.nome, prazo: reg.prazo, gratis };
+}
+function updateCheckout() {
+  const sub = bagTotal(), retira = $('#fShip').value === 'retirada', empty = bag.length === 0;
+  $('#cepBox').hidden = retira; $('#addrBox').hidden = !PAY_URL || retira;
+  $('#subtotal').textContent = brl.format(sub);
+  let total = sub, note = '';
+  if (PAY_URL) {
+    const f = freteInfo();
+    $('#freteVal').textContent = f.ok ? (f.valor === 0 ? 'Grátis' : brl.format(f.valor)) + (f.regiao && !retira ? ' · ' + f.regiao : '') : f.msg;
+    total = sub + (f.ok ? f.valor : 0);
+    if (retira) note = 'Retire na loja depois da confirmação do pagamento.';
+    else if (f.ok && f.prazo) note = 'Prazo estimado: ' + f.prazo + '.';
+    else if (FRETE.gratisAcima && sub < FRETE.gratisAcima) note = 'Frete grátis em compras acima de ' + brl.format(FRETE.gratisAcima) + '.';
+  } else note = 'O frete é somado ao final, no WhatsApp. Lá você recebe o link do Mercado Pago com o valor total.';
+  $('#totalVal').textContent = brl.format(total); $('#coNote').textContent = note;
   const co = $('#checkout');
   if (empty) { co.removeAttribute('href'); co.setAttribute('aria-disabled', 'true'); }
   else { co.href = waLink(checkoutText()); co.removeAttribute('aria-disabled'); }
 }
+if (FRETE.retirada === false) { const o = $('#fShip option[value="retirada"]'); if (o) o.remove(); }
 
 $('#bagList').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return;
@@ -86,15 +118,56 @@ $('#bagList').addEventListener('click', e => {
   saveBag(); renderBag();
 });
 ['input', 'change'].forEach(ev => {
-  ['#fName', '#fShip', '#fCep'].forEach(s => $(s).addEventListener(ev, () => {
-    $('#cepBox').hidden = $('#fShip').value === 'Retirar na loja';
-    renderBag();
-  }));
+  ['#fName', '#fShip', '#fCep', '#fTel', '#fMail', '#fRua', '#fNum', '#fCompl', '#fBairro', '#fCidade', '#fUf'].forEach(s => $(s).addEventListener(ev, () => { $('#coErr').textContent = ''; updateCheckout(); }));
 });
+let cepLast = '';
+async function lookupCep(d) {
+  if (!PAY_URL || d === cepLast) return; cepLast = d;
+  const msg = $('#cepMsg'); msg.textContent = 'Buscando endereço…';
+  try {
+    const j = await (await fetch('https://viacep.com.br/ws/' + d + '/json/')).json();
+    if (j.erro) { msg.textContent = 'CEP não encontrado. Preencha o endereço abaixo.'; return; }
+    if (j.logradouro) $('#fRua').value = j.logradouro;
+    if (j.bairro) $('#fBairro').value = j.bairro;
+    $('#fCidade').value = j.localidade || ''; $('#fUf').value = j.uf || '';
+    msg.textContent = ''; updateCheckout(); if (!$('#fNum').value) $('#fNum').focus();
+  } catch (_) { msg.textContent = 'Não consegui buscar o CEP. Preencha o endereço abaixo.'; }
+}
 $('#fCep').addEventListener('input', e => {
   const d = e.target.value.replace(/\D/g, '').slice(0, 8);
   e.target.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+  if (d.length === 8) lookupCep(d); else cepLast = '';
 });
+$('#fUf').addEventListener('input', e => { e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase(); });
+$('#bagFoot').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!PAY_URL || !bag.length) return;
+  const err = m => { $('#coErr').textContent = m; }; err('');
+  const nome = $('#fName').value.trim(), tel = digits($('#fTel').value), mail = $('#fMail').value.trim();
+  if (nome.length < 2) return err('Informe seu nome.');
+  if (tel.length < 10) return err('Informe seu WhatsApp com DDD.');
+  if (!/^\S+@\S+\.\S+$/.test(mail)) return err('Informe um e-mail válido.');
+  let entrega = { tipo: 'retirada' };
+  if ($('#fShip').value !== 'retirada') {
+    entrega = { tipo: 'entrega', cep: digits($('#fCep').value), rua: $('#fRua').value.trim(), numero: $('#fNum').value.trim(), compl: $('#fCompl').value.trim(), bairro: $('#fBairro').value.trim(), cidade: $('#fCidade').value.trim(), uf: $('#fUf').value.trim().toUpperCase() };
+    if (entrega.cep.length !== 8) return err('Informe o CEP.');
+    if (!entrega.rua || !entrega.numero || !entrega.bairro || !entrega.cidade || entrega.uf.length !== 2) return err('Complete o endereço de entrega.');
+    const f = freteInfo();
+    if (!f.ok) return err(f.bloqueia ? 'Ainda não entregamos nesse estado. Escolha retirar na loja ou chame no WhatsApp.' : 'Confira o endereço de entrega.');
+  }
+  const btn = $('#payBtn'); btn.disabled = true; btn.textContent = 'Abrindo o Mercado Pago…';
+  try {
+    const r = await fetch(PAY_URL + '/checkout', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ items: bag.map(i => ({ id: i.id, size: i.size, qty: i.qty })), cliente: { nome, telefone: tel, email: mail }, entrega }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.url) throw new Error(j.error || 'Não consegui iniciar o pagamento. Tente de novo ou peça pelo WhatsApp.');
+    location.href = j.url;
+  } catch (ex) {
+    err(ex instanceof TypeError ? 'Sem conexão com o pagamento agora. Tente de novo ou peça pelo WhatsApp.' : ex.message);
+    btn.disabled = false; btn.textContent = 'Pagar com Mercado Pago';
+  }
+});
+window.addEventListener('pageshow', () => { const b = $('#payBtn'); b.disabled = false; b.textContent = 'Pagar com Mercado Pago'; });
 $('#checkout').addEventListener('click', e => {
   if ($('#checkout').getAttribute('aria-disabled') === 'true') e.preventDefault();
 });

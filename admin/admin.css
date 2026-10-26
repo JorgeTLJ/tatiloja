@@ -105,3 +105,9 @@ select { border: 1px solid var(--line); background: var(--bg); color: var(--ink)
 .chartwrap { overflow-x: auto; }
 .chart { min-width: 560px; }
 .kpi .v { font-size: clamp(22px, 6vw, 30px); overflow-wrap: normal; white-space: nowrap; }
+
+.regs { display: grid; gap: 10px; margin-bottom: 10px; }
+.rg { display: grid; grid-template-columns: 1.4fr 1.6fr 110px 44px; gap: 8px; align-items: center; }
+@media (max-width: 560px) { .rg { grid-template-columns: 1fr 1fr; } .rg .rn, .rg .ru { grid-column: 1 / -1; } }
+.rg button { min-height: 44px; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; cursor: pointer; color: var(--error); }
+.sale a { color: var(--gold); }

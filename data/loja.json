@@ -1,7 +1,69 @@
 {
   "settings": {
     "whatsapp": "",
-    "instagram": ""
+    "instagram": "",
+    "checkoutUrl": "",
+    "frete": {
+      "retirada": true,
+      "gratisAcima": null,
+      "regioes": [
+        {
+          "nome": "Estado de São Paulo",
+          "ufs": [
+            "SP"
+          ],
+          "preco": 18.0,
+          "prazo": ""
+        },
+        {
+          "nome": "Sul e Sudeste",
+          "ufs": [
+            "RJ",
+            "MG",
+            "ES",
+            "PR",
+            "SC",
+            "RS"
+          ],
+          "preco": 25.0,
+          "prazo": ""
+        },
+        {
+          "nome": "Centro-Oeste e Nordeste",
+          "ufs": [
+            "DF",
+            "GO",
+            "MT",
+            "MS",
+            "BA",
+            "SE",
+            "AL",
+            "PE",
+            "PB",
+            "RN",
+            "CE",
+            "PI",
+            "MA"
+          ],
+          "preco": 35.0,
+          "prazo": ""
+        },
+        {
+          "nome": "Norte",
+          "ufs": [
+            "AM",
+            "PA",
+            "AC",
+            "RO",
+            "RR",
+            "AP",
+            "TO"
+          ],
+          "preco": 45.0,
+          "prazo": ""
+        }
+      ]
+    }
   },
   "products": [
     {
