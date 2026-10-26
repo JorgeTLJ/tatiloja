@@ -1,5 +1,5 @@
 /* Vendas e dashboard. As vendas ficam num repositório PRIVADO (vendas.json), nunca no site público. */
-const VREPO = 'JorgeTLJ/tatiloja-dados', VPATH = 'vendas.json';
+const VREPO = 'JorgeTLJ/tldados', VPATH = 'vendas.json';
 let vendas = [], vsha = '', vState = 'loading', period = '30d', saleEdit = null;
 
 const money = n => brl.format(n || 0);
@@ -164,9 +164,9 @@ function setupHtml() {
   return '<div class="callout"><h3>Falta criar o lugar das vendas (1 vez só)</h3>' +
     '<p>As vendas e os nomes dos clientes não podem ficar no repositório do site, que é público. Elas ficam num repositório <strong>privado</strong>, só seu:</p>' +
     '<ol><li>Abra <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a>.</li>' +
-    '<li>Nome: <b>tatiloja-dados</b>. Marque <b>Private</b> e também <b>Add a README file</b>. Clique em <b>Create repository</b>.</li>' +
+    '<li>Nome: <b>tldados</b>. Marque <b>Private</b> e também <b>Add a README file</b>. Clique em <b>Create repository</b>.</li>' +
     '<li>Abra <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener">seus tokens</a>, clique no token “Painel Tati Loja” → <b>Edit</b>.</li>' +
-    '<li>Em <b>Repository access</b>, mantenha <b>Only select repositories</b> e adicione também <b>tatiloja-dados</b>. Confira que <b>Contents</b> segue em <b>Read and write</b> e clique em <b>Update</b>.</li>' +
+    '<li>Em <b>Repository access</b>, mantenha <b>Only select repositories</b> e adicione também <b>tldados</b>. Confira que <b>Contents</b> segue em <b>Read and write</b> e clique em <b>Update</b>.</li>' +
     '<li>Volte aqui e <button class="btn ghost sm" type="button" onclick="location.reload()">atualize a página</button>.</li></ol></div>';
 }
 function renderVendas() {
