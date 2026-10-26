@@ -243,3 +243,6 @@ footer .logo { font-family: var(--font-display); font-weight: 700; font-size: 30
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+.old { color: var(--muted); font-size: .65em; font-weight: 500; margin-right: 6px; }
+.card .sold { position: absolute; top: 10px; left: 10px; background: var(--ink); color: var(--bg); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; }

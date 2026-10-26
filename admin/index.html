@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel — Tati Loja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body class="adm">
+<header class="ahead">
+  <div class="wrap row">
+    <strong class="brand">Tati Loja <small>painel</small></strong>
+    <span class="grow"></span>
+    <a class="btn ghost sm" href="../" target="_blank" rel="noopener">Ver o site</a>
+    <button class="btn ghost sm" id="logout" type="button" hidden>Sair</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="login" class="panel" hidden>
+    <h1>Entrar no painel</h1>
+    <p class="muted">O painel grava as alterações direto no repositório do site, usando a sua conta do GitHub. Cole abaixo o <strong>token de acesso</strong> (só aparece uma vez). Ele fica salvo apenas neste navegador.</p>
+    <details class="how"><summary>Como criar o token (2 minutos)</summary>
+      <ol>
+        <li>Abra <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</li>
+        <li>Nome: <b>Painel Tati Loja</b>. Validade: <b>1 ano</b>.</li>
+        <li>Em <b>Repository access</b>, escolha <b>Only select repositories</b> e marque <b>tatiloja</b>.</li>
+        <li>Em <b>Permissions → Repository permissions</b>, coloque <b>Contents: Read and write</b>.</li>
+        <li>Clique em <b>Generate token</b> e copie o código que começa com <code>github_pat_</code>.</li>
+      </ol>
+    </details>
+    <form id="loginForm">
+      <label class="lbl" for="tok">Token</label>
+      <input id="tok" type="password" autocomplete="off" placeholder="github_pat_..." required>
+      <p class="err" id="loginErr" role="alert"></p>
+      <button class="btn" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <section id="app" hidden>
+    <div class="bar">
+      <h1>Produtos</h1>
+      <span class="grow"></span>
+      <span id="dirty" class="pill" hidden>Alterações não publicadas</span>
+      <button class="btn ghost" id="addBtn" type="button">+ Novo produto</button>
+      <button class="btn" id="saveBtn" type="button" disabled>Publicar alterações</button>
+    </div>
+    <p id="status" class="status" role="status"></p>
+
+    <div class="panel">
+      <h2>Dados da loja</h2>
+      <div class="grid2">
+        <div><label class="lbl" for="sWa">WhatsApp da loja</label><input id="sWa" inputmode="tel" placeholder="(11) 99999-9999"><p class="hint">Com DDD. O site usa este número nos botões de pedido.</p></div>
+        <div><label class="lbl" for="sIg">Instagram</label><input id="sIg" placeholder="@tatiloja"></div>
+      </div>
+    </div>
+
+    <ul id="list" class="plist"></ul>
+    <p id="empty" class="muted" hidden>Nenhum produto ainda. Clique em “Novo produto”.</p>
+  </section>
+</main>
+
+<div class="layer" id="edLayer" hidden>
+  <div class="scrim" data-close></div>
+  <form class="sheet esheet" id="edForm" novalidate>
+    <div class="row"><h2 id="edTitle">Produto</h2><span class="grow"></span><button class="x" type="button" data-close aria-label="Fechar">×</button></div>
+    <div class="grid2">
+      <div class="full"><label class="lbl" for="eName">Nome</label><input id="eName" required></div>
+      <div><label class="lbl" for="eCat">Categoria</label><input id="eCat" list="cats" required placeholder="Blusas"><datalist id="cats"></datalist></div>
+      <div><label class="lbl" for="eSizes">Tamanhos</label><input id="eSizes" placeholder="P, M, G, GG"><p class="hint">Separe por vírgula.</p></div>
+      <div><label class="lbl" for="ePrice">Preço (R$)</label><input id="ePrice" inputmode="decimal" placeholder="59,90" required></div>
+      <div><label class="lbl" for="eOld">Preço antigo (opcional)</label><input id="eOld" inputmode="decimal" placeholder="79,90"></div>
+      <div class="full"><label class="lbl" for="eDesc">Descrição</label><textarea id="eDesc" rows="3"></textarea></div>
+      <div class="full"><label class="lbl" for="eMp">Link do Mercado Pago (opcional)</label><input id="eMp" inputmode="url" placeholder="https://mpago.la/..."></div>
+      <div class="full">
+        <span class="lbl">Fotos (até 4; a primeira é a capa)</span>
+        <div id="photos" class="photos"></div>
+        <label class="btn ghost sm addph">+ Adicionar foto<input id="eFile" type="file" accept="image/*" multiple hidden></label>
+      </div>
+      <label class="chk"><input type="checkbox" id="eSold"> Esgotado</label>
+      <label class="chk"><input type="checkbox" id="eVis" checked> Visível no site</label>
+    </div>
+    <p class="err" id="edErr" role="alert"></p>
+    <div class="row end"><button class="btn ghost" type="button" data-close>Cancelar</button><button class="btn" type="submit">Salvar produto</button></div>
+  </form>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>

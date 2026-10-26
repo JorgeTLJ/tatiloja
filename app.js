@@ -116,13 +116,17 @@ document.addEventListener('click', e => { if (e.target.closest('[data-close]')) 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideLayer(); });
 $('#bagBtn').addEventListener('click', () => showLayer($('#bagLayer'), '.close'));
 
+function priceHtml(p) {
+  return (p.oldPrice && p.oldPrice > p.price ? '<s class="old">' + brl.format(p.oldPrice) + '</s> ' : '') + brl.format(p.price);
+}
+
 /* ============ PRODUTO ============ */
 let current = null, chosen = null;
 function openProduct(id) {
   const p = byId[id]; current = p; chosen = null;
   $('#pImg').src = p.imgs[0]; $('#pImg').alt = (p.alt || p.name);
   $('#pCat').textContent = p.cat; $('#pTitle').textContent = p.name;
-  $('#pPrice').textContent = brl.format(p.price); $('#pDesc').textContent = p.desc;
+  $('#pPrice').innerHTML = priceHtml(p); $('#pDesc').textContent = p.desc;
   $('#pError').textContent = '';
   const box = $('#pSizes'); box.innerHTML = '';
   p.sizes.forEach(s => {
@@ -142,6 +146,7 @@ function openProduct(id) {
   showLayer($('#productLayer'), '.size');
 }
 $('#pAdd').addEventListener('click', () => {
+  if (current.soldOut) { $('#pError').textContent = 'Peça esgotada no momento. Chame no WhatsApp para saber da reposição.'; return; }
   if (!chosen) { $('#pError').textContent = 'Escolha um tamanho para continuar.'; return; }
   addToBag(current.id, chosen);
   hideLayer(); toast('Adicionado à sacola');
@@ -152,7 +157,7 @@ $('#pWhats').addEventListener('click', e => {
 
 /* ============ VITRINE ============ */
 let filter = 'Todos', sort = 'new';
-const cats = ['Todos', ...new Set(PRODUCTS.map(p => p.cat)), SEMIJOIAS];
+const cats = ['Todos', ...new Set([...PRODUCTS.map(p => p.cat).filter(c => c !== SEMIJOIAS), SEMIJOIAS])];
 
 function renderChips() {
   const box = $('#chips'); box.innerHTML = '';
@@ -166,7 +171,7 @@ function renderChips() {
 }
 function renderGrid() {
   const grid = $('#grid'); grid.innerHTML = '';
-  if (filter === SEMIJOIAS) {
+  if (filter === SEMIJOIAS && !PRODUCTS.some(p => p.cat === SEMIJOIAS)) {
     $('#count').textContent = '';
     grid.innerHTML = '<div class="empty-card"><h3>Semijoias em breve por aqui</h3><p>Estamos preparando as fotos. Enquanto isso, chame no WhatsApp e mostramos as peças disponíveis na loja.</p><a class="btn" href="' +
       waLink('Olá, Tati Loja! Quero ver as semijoias disponíveis.') + '" target="_blank" rel="noopener">Ver semijoias no WhatsApp</a></div>';
@@ -180,8 +185,8 @@ function renderGrid() {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'card';
     b.setAttribute('aria-label', p.name + ', ' + brl.format(p.price));
-    b.innerHTML = '<span class="media"><img loading="lazy" alt="' + (p.alt || p.name) + '" src="' + p.imgs[0] + '" width="600" height="800"><span class="add">Escolher tamanho</span></span>' +
-      '<span class="info"><span class="cat">' + p.cat + '</span><span class="name">' + p.name + '</span><span class="price">' + brl.format(p.price) + '</span></span>';
+    b.innerHTML = '<span class="media"><img loading="lazy" alt="' + (p.alt || p.name) + '" src="' + p.imgs[0] + '" width="600" height="800"><span class="add">' + (p.soldOut ? 'Esgotado' : 'Escolher tamanho') + '</span>' + (p.soldOut ? '<span class="sold">Esgotado</span>' : '') + '</span>' +
+      '<span class="info"><span class="cat">' + p.cat + '</span><span class="name">' + p.name + '</span><span class="price">' + priceHtml(p) + '</span></span>';
     b.addEventListener('click', () => openProduct(p.id));
     grid.appendChild(b);
   });
