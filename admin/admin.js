@@ -3,16 +3,21 @@ const REPO = 'JorgeTLJ/tatiloja', BRANCH = 'main', DATA_PATH = 'data/loja.json';
 const $ = (s, r = document) => r.querySelector(s);
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 let token = '', data = null, sha = '', dirty = false, pending = {}; // pending: caminho -> dataURL
+const sent = new Set(); // fotos já enviadas ao GitHub nesta sessão
 let editing = null; // {index|-1, draft}
 
 try { token = localStorage.getItem('tatiloja.token') || ''; } catch (e) {}
 
 /* ---------- GitHub ---------- */
 async function gh(path, opts = {}) {
-  const r = await fetch('https://api.github.com/repos/' + (opts.repo || REPO) + path, {
-    method: opts.method, body: opts.body, cache: 'no-store',
-    headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) },
-  });
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);
+  let r;
+  try {
+    r = await fetch('https://api.github.com/repos/' + (opts.repo || REPO) + path, {
+      method: opts.method, body: opts.body, cache: 'no-store', signal: ctl.signal,
+      headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) },
+    });
+  } finally { clearTimeout(timer); }
   if (!r.ok) { const e = new Error('GitHub ' + r.status); e.status = r.status; try { e.body = await r.json(); } catch (_) {} throw e; }
   return r.json();
 }
@@ -158,22 +163,29 @@ $('#addBtn').addEventListener('click', () => openEditor(-1));
 /* ---------- Publicar ---------- */
 $('#saveBtn').addEventListener('click', async () => {
   const btn = $('#saveBtn'); btn.disabled = true; status('Publicando…');
+  let text = '';
+  const done = () => { try { setDirty(false); render(); if (window.onCatalogChange) window.onCatalogChange(); } catch (e) { console.error(e); } status('Publicado! O site atualiza em cerca de 1 minuto.', 'ok'); };
   try {
     const used = new Set(data.products.flatMap(p => p.imgs || []));
     for (const path of Object.keys(pending)) {
       if (!used.has(path)) { delete pending[path]; continue; }
+      if (sent.has(path)) continue;
       status('Enviando foto ' + path.split('/').pop() + '…');
-      await put(path, pending[path].split(',')[1], 'Painel: foto ' + path.split('/').pop());
-      delete pending[path];
+      try { await put(path, pending[path].split(',')[1], 'Painel: foto ' + path.split('/').pop()); }
+      catch (e) { if (e.status !== 422) throw e; } // 422: a foto já estava lá (envio anterior que não respondeu)
+      sent.add(path);
     }
     status('Salvando produtos…');
-    const body = { settings: data.settings, products: data.products };
-    const r = await put(DATA_PATH, toB64(JSON.stringify(body, null, 2) + '\n'), 'Painel: atualiza produtos e dados da loja', sha);
-    sha = r.content.sha; setDirty(false); render(); if (window.onCatalogChange) window.onCatalogChange();
-    status('Publicado! O site atualiza em cerca de 1 minuto.', 'ok');
+    text = JSON.stringify({ settings: data.settings, products: data.products }, null, 2) + '\n';
+    const r = await put(DATA_PATH, toB64(text), 'Painel: atualiza produtos e dados da loja', sha);
+    sha = r.content.sha; done();
   } catch (err) {
+    // Se o GitHub demorou demais, confere se a publicação aconteceu mesmo assim.
+    if (text && (err.name === 'AbortError' || err instanceof TypeError)) {
+      try { const f = await gh('/contents/' + DATA_PATH + '?ref=' + BRANCH); if (fromB64(f.content) === text) { sha = f.sha; return done(); } } catch (_) {}
+    }
     btn.disabled = false;
-    status(err.status === 409 || err.status === 422 ? 'O catálogo mudou em outro lugar. Recarregue a página e refaça a alteração.' :
+    status(err.name === 'AbortError' ? 'O GitHub demorou demais para responder. Clique em Publicar de novo; nada se perde.' : err instanceof TypeError ? 'Sem conexão com o GitHub agora. Confira a internet e tente de novo.' : err.status === 409 || err.status === 422 ? 'O catálogo mudou em outro lugar. Recarregue a página e refaça a alteração.' :
       err.status === 401 || err.status === 403 ? 'O token não tem permissão de escrita. Crie outro com "Contents: Read and write".' : 'Não consegui publicar (' + err.message + '). Tente de novo.', 'bad');
   }
 });
