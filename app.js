@@ -201,6 +201,7 @@ function openProduct(id) {
   $('#pCat').textContent = p.cat; $('#pTitle').textContent = p.name;
   $('#pPrice').innerHTML = priceHtml(p); $('#pDesc').textContent = p.desc;
   $('#pError').textContent = '';
+  $('#pNote').textContent = PAY_URL ? 'Pagamento seguro pelo Mercado Pago, com Pix ou cartão. O frete é calculado na sacola.' : 'Você confirma o frete e paga pelo Mercado Pago depois, direto no WhatsApp.';
   const box = $('#pSizes'); box.innerHTML = '';
   p.sizes.forEach(s => {
     const b = document.createElement('button');
@@ -218,6 +219,12 @@ function openProduct(id) {
   const w = $('#pWhats'); w.removeAttribute('href'); w.setAttribute('aria-disabled', 'true');
   showLayer($('#productLayer'), '.size');
 }
+$('#pBuy').addEventListener('click', () => {
+  if (current.soldOut) { $('#pError').textContent = 'Peça esgotada no momento. Chame no WhatsApp para saber da reposição.'; return; }
+  if (!chosen) { $('#pError').textContent = 'Escolha um tamanho para continuar.'; return; }
+  addToBag(current.id, chosen);
+  hideLayer(); showLayer($('#bagLayer'), '.close');
+});
 $('#pAdd').addEventListener('click', () => {
   if (current.soldOut) { $('#pError').textContent = 'Peça esgotada no momento. Chame no WhatsApp para saber da reposição.'; return; }
   if (!chosen) { $('#pError').textContent = 'Escolha um tamanho para continuar.'; return; }
@@ -258,7 +265,7 @@ function renderGrid() {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'card';
     b.setAttribute('aria-label', p.name + ', ' + brl.format(p.price));
-    b.innerHTML = '<span class="media"><img loading="lazy" alt="' + (p.alt || p.name) + '" src="' + p.imgs[0] + '" width="600" height="800"><span class="add">' + (p.soldOut ? 'Esgotado' : 'Escolher tamanho') + '</span>' + (p.soldOut ? '<span class="sold">Esgotado</span>' : '') + '</span>' +
+    b.innerHTML = '<span class="media"><img loading="lazy" alt="' + (p.alt || p.name) + '" src="' + p.imgs[0] + '" width="600" height="800"><span class="add">' + (p.soldOut ? 'Esgotado' : '<b>Compre já</b><span>Escolher tamanho</span>') + '</span>' + (p.soldOut ? '<span class="sold">Esgotado</span>' : '') + '</span>' +
       '<span class="info"><span class="cat">' + p.cat + '</span><span class="name">' + p.name + '</span><span class="price">' + priceHtml(p) + '</span></span>';
     b.addEventListener('click', () => openProduct(p.id));
     grid.appendChild(b);
