@@ -1,8 +1,8 @@
 {
   "settings": {
-    "whatsapp": "",
-    "instagram": "",
-    "checkoutUrl": "",
+    "whatsapp": "5511963895254",
+    "instagram": "@lojatatinader",
+    "checkoutUrl": "https://tatiloja-api.naderjorge19.workers.dev",
     "frete": {
       "retirada": true,
       "gratisAcima": null,
@@ -12,7 +12,7 @@
           "ufs": [
             "SP"
           ],
-          "preco": 18.0,
+          "preco": 18,
           "prazo": ""
         },
         {
@@ -25,7 +25,7 @@
             "SC",
             "RS"
           ],
-          "preco": 25.0,
+          "preco": 25,
           "prazo": ""
         },
         {
@@ -45,7 +45,7 @@
             "PI",
             "MA"
           ],
-          "preco": 35.0,
+          "preco": 35,
           "prazo": ""
         },
         {
@@ -59,13 +59,31 @@
             "AP",
             "TO"
           ],
-          "preco": 45.0,
+          "preco": 45,
           "prazo": ""
         }
       ]
     }
   },
   "products": [
+    {
+      "id": "teste",
+      "name": "Teste",
+      "cat": "Blusas",
+      "price": 1,
+      "oldPrice": null,
+      "sizes": [
+        "P"
+      ],
+      "desc": "Teste",
+      "imgs": [
+        "img/teste-mw0ttvoa0.jpg"
+      ],
+      "mp": "",
+      "soldOut": false,
+      "visible": true,
+      "alt": "Teste"
+    },
     {
       "id": "regata-off",
       "cat": "Blusas",
