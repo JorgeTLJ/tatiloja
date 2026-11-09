@@ -3,8 +3,8 @@ main = "src/index.js"
 compatibility_date = "2025-01-01"
 
 [vars]
-# Endereço do site (sem barra no final). Trocar para https://tatiloja.com.br quando o domínio estiver no ar.
-SITE_URL = "https://jorgetlj.github.io/tatiloja"
+# Endereço do site (sem barra no final).
+SITE_URL = "https://tatiloja.com.br"
 # Sites que podem chamar este servidor.
 ALLOWED_ORIGINS = "https://jorgetlj.github.io,https://tatiloja.com.br,https://www.tatiloja.com.br"
 # Repositório privado onde as vendas são gravadas.
