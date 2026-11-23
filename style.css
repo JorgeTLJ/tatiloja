@@ -268,7 +268,7 @@ html.w-open, html.w-open body { overflow: hidden; }
 .w-card { width: min(100%, 440px); text-align: center; display: grid; justify-items: center; gap: 0; margin-block: auto; }
 .w-logo { width: min(58vw, 230px, 30dvh); height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 120px 120px 18px 18px; box-shadow: var(--shadow); }
 .w-eyebrow { margin: 26px 0 10px; font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); font-weight: 500; }
-.w-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(2rem, 8vw, 2.9rem); line-height: 1.05; margin: 0 0 28px; text-wrap: balance; }
+.w-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(2rem, 8vw, 2.9rem); line-height: 1.05; margin: 0 0 22px; text-wrap: balance; }
 .w-title em { font-style: italic; font-weight: 500; color: var(--gold); }
 .w-actions { display: grid; gap: 12px; width: 100%; }
 .w-btn {
@@ -290,3 +290,17 @@ html.w-open, html.w-open body { overflow: hidden; }
   .brand small { display: none; }
   .brand b { white-space: nowrap; }
 }
+
+/* Boas-vindas: fundo rosa da logo, sem moldura; três botões iguais */
+.welcome { background: #F9D1D8; }
+.w-logo {
+  width: min(74vw, 330px, 34dvh); aspect-ratio: 4 / 5; border-radius: 0; box-shadow: none; object-fit: cover;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+  mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+}
+.w-eyebrow { margin-top: 6px; color: var(--ink); opacity: .75; }
+.w-title em { color: #7A500A; }
+.w-btn, .w-btn.primary { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+.w-btn:hover, .w-btn.primary:hover { background: var(--gold); border-color: var(--gold); filter: brightness(1.1); transform: translateY(-1px); }
+.w-whats { color: var(--ink); opacity: .75; }
