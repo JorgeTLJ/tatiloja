@@ -63,7 +63,14 @@
           "prazo": ""
         }
       ]
-    }
+    },
+    "semijoiasCats": [
+      "Brincos",
+      "Colares",
+      "Pulseiras",
+      "Anéis",
+      "Semijoias"
+    ]
   },
   "products": [
     {

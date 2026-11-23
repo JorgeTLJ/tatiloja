@@ -304,3 +304,13 @@ html.w-open, html.w-open body { overflow: hidden; }
 .w-btn, .w-btn.primary { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
 .w-btn:hover, .w-btn.primary:hover { background: var(--gold); border-color: var(--gold); filter: brightness(1.1); transform: translateY(-1px); }
 .w-whats { color: var(--ink); opacity: .75; }
+
+/* Subcategorias e troca de seção */
+.tools { align-items: flex-start; }
+.switch { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-left: auto; padding-top: 8px; }
+.switch-link { border: 0; background: transparent; padding: 4px 0; color: var(--gold); font-weight: 500; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; border-bottom: 1px solid var(--gold-line); }
+.switch-link:hover { color: var(--ink); border-color: var(--ink); }
+.sortbar { display: flex; justify-content: flex-end; padding-bottom: 18px; }
+.tools { padding-bottom: 6px; }
+@media (max-width: 720px) { .switch { width: 100%; justify-content: flex-end; padding-top: 4px; } }
+@media (max-width: 720px) { .chip { padding: 6px 14px; min-height: 36px; font-size: 13px; } .tools { gap: 8px 12px; } }

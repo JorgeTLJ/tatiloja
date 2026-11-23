@@ -104,7 +104,7 @@ function openEditor(i) {
   $('#eName').value = d.name; $('#eCat').value = d.cat; $('#eSizes').value = (d.sizes || []).join(', ');
   $('#ePrice').value = fmtMoney(d.price); $('#eOld').value = fmtMoney(d.oldPrice); $('#eDesc').value = d.desc || ''; $('#eMp').value = d.mp || '';
   $('#eSold').checked = !!d.soldOut; $('#eVis').checked = d.visible !== false; $('#edErr').textContent = '';
-  const cats = [...new Set(['Blusas', 'Saias', 'Vestidos', 'Calças', 'Acessórios', 'Sapatos', 'Semijoias', ...data.products.map(x => x.cat)])];
+  const cats = [...new Set(['Regatas', 'Blusas', 'Vestidos', 'Conjuntos', 'Saias', 'Calças', 'Acessórios', 'Sapatos', 'Brincos', 'Colares', 'Pulseiras', 'Anéis', 'Semijoias', ...data.products.map(x => x.cat)])];
   $('#cats').innerHTML = cats.map(c => '<option value="' + esc(c) + '">').join('');
   renderPhotos(); $('#edLayer').hidden = false; document.documentElement.style.overflow = 'hidden'; $('#eName').focus();
 }

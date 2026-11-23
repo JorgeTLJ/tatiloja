@@ -236,23 +236,44 @@ $('#pWhats').addEventListener('click', e => {
 });
 
 /* ============ VITRINE ============ */
-let filter = 'Todos', sort = 'new';
-const cats = ['Todos', 'Roupas', SEMIJOIAS];
-const inFilter = p => filter === 'Todos' || (filter === 'Roupas' ? p.cat !== SEMIJOIAS : p.cat === filter);
+let section = 'Todos', sub = 'Todos', sort = 'new';
+const JEWEL_CATS = (DATA.settings && DATA.settings.semijoiasCats) || ['Brincos', 'Colares', 'Pulseiras', 'Anéis', SEMIJOIAS];
+const isJewel = p => JEWEL_CATS.includes(p.cat);
+const inSection = p => section === 'Todos' || (section === 'Roupas' ? !isJewel(p) : isJewel(p));
+const inFilter = p => inSection(p) && (sub === 'Todos' || p.cat === sub);
+function subCats() {
+  const used = [...new Set(PRODUCTS.filter(inSection).map(p => p.cat))];
+  if (section === 'Semijoias') return [...new Set([...JEWEL_CATS.filter(c => c !== SEMIJOIAS), ...used])];
+  return used;
+}
+function setSection(s) { section = s; sub = 'Todos'; renderChips(); renderGrid(); }
 
 function renderChips() {
+  $('#secTitle').textContent = section === 'Roupas' ? 'Roupas' : section === 'Semijoias' ? 'Semijoias' : 'Catálogo';
   const box = $('#chips'); box.innerHTML = '';
-  cats.forEach(c => {
+  const mk = (label, val) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'chip'; b.textContent = c;
-    b.setAttribute('aria-pressed', String(c === filter));
-    b.addEventListener('click', () => { filter = c; renderChips(); renderGrid(); });
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', String(val === sub));
+    b.addEventListener('click', () => { sub = val; renderChips(); renderGrid(); });
     box.appendChild(b);
-  });
+  };
+  mk('Ver tudo', 'Todos');
+  if (section !== 'Todos') subCats().forEach(c => mk(c, c));
+  const sw = $('#switch'); sw.innerHTML = '';
+  const link = (label, target) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'switch-link'; b.textContent = label + ' \u2192';
+    b.addEventListener('click', () => { setSection(target); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    sw.appendChild(b);
+  };
+  if (section === 'Roupas') link('Ver semijoias', 'Semijoias');
+  else if (section === 'Semijoias') link('Ver roupas', 'Roupas');
+  else { link('Ver roupas', 'Roupas'); link('Ver semijoias', 'Semijoias'); }
 }
 function renderGrid() {
   const grid = $('#grid'); grid.innerHTML = '';
-  if (filter === SEMIJOIAS && !PRODUCTS.some(p => p.cat === SEMIJOIAS)) {
+  if (section === 'Semijoias' && !PRODUCTS.some(inFilter)) {
     $('#count').textContent = '';
     grid.innerHTML = '<div class="empty-card"><h3>Semijoias em breve por aqui</h3><p>Estamos preparando as fotos. Enquanto isso, chame no WhatsApp e mostramos as peças disponíveis na loja.</p><a class="btn" href="' +
       waLink('Olá, Tati Loja! Quero ver as semijoias disponíveis.') + '" target="_blank" rel="noopener">Ver semijoias no WhatsApp</a></div>';
@@ -288,7 +309,7 @@ function showWelcome() {
   window.scrollTo(0, 0);
 }
 function enter(f) {
-  filter = f; renderChips(); renderGrid();
+  setSection(f);
   welcome.classList.add('out'); root.classList.remove('w-open');
   setTimeout(() => { welcome.hidden = true; }, 450);
   try { sessionStorage.setItem('tatiloja.entrou', '1'); } catch (e) {}
@@ -297,7 +318,7 @@ function enter(f) {
 welcome.querySelectorAll('[data-enter]').forEach(b => b.addEventListener('click', () => enter(b.dataset.enter)));
 document.querySelectorAll('[data-go]').forEach(el => el.addEventListener('click', e => {
   e.preventDefault();
-  if (el.dataset.go === 'home') showWelcome(); else { filter = el.dataset.go; renderChips(); renderGrid(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  if (el.dataset.go === 'home') showWelcome(); else { setSection(el.dataset.go); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 }));
 let seen = false; try { seen = sessionStorage.getItem('tatiloja.entrou') === '1'; } catch (e) {}
 if (seen || location.hash.length > 1) { welcome.hidden = true; } else { root.classList.add('w-open'); }
