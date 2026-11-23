@@ -30,10 +30,15 @@ const saveBag = () => { try { localStorage.setItem('tatiloja.sacola', JSON.strin
 const bagCount = () => bag.reduce((n, i) => n + i.qty, 0);
 const bagTotal = () => bag.reduce((n, i) => n + i.qty * byId[i.id].price, 0);
 
+let AVAIL = {};
+const leftOf = (p, size) => AVAIL[p.id] ? (Number(AVAIL[p.id][size]) || 0) : Infinity;
+const outNow = p => !!p.soldOut || (!!AVAIL[p.id] && p.sizes.every(s => leftOf(p, s) <= 0));
 function addToBag(id, size, qty = 1) {
-  const it = bag.find(i => i.id === id && i.size === size);
+  const it = bag.find(i => i.id === id && i.size === size), have = it ? it.qty : 0, left = leftOf(byId[id], size);
+  if (have + qty > left) return left;
   if (it) it.qty += qty; else bag.push({ id, size, qty });
   saveBag(); renderBag();
+  return true;
 }
 
 function orderText(items, extra) {
@@ -156,7 +161,7 @@ if (FRETE.retirada === false) { const o = $('#fShip option[value="retirada"]'); 
 $('#bagList').addEventListener('click', e => {
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const idx = +b.closest('.line-item').dataset.idx, it = bag[idx], act = b.dataset.act;
-  if (act === 'plus') it.qty += 1;
+  if (act === 'plus') { const left = leftOf(byId[it.id], it.size); if (it.qty + 1 > left) { $('#coErr').textContent = 'Só temos ' + left + (left === 1 ? ' unidade' : ' unidades') + ' desse tamanho.'; return; } it.qty += 1; }
   if (act === 'minus') it.qty -= 1;
   if (act === 'remove' || it.qty <= 0) bag.splice(idx, 1);
   saveBag(); renderBag();
@@ -247,13 +252,17 @@ function openProduct(id) {
   $('#pPrice').innerHTML = priceHtml(p); $('#pDesc').textContent = p.desc;
   $('#pError').textContent = '';
   $('#pNote').textContent = PAY_URL ? 'Pagamento seguro pelo Mercado Pago, com Pix ou cartão. O frete é calculado na sacola.' : 'Você confirma o frete e paga pelo Mercado Pago depois, direto no WhatsApp.';
+  $('#pLeft').textContent = '';
   const box = $('#pSizes'); box.innerHTML = '';
   p.sizes.forEach(s => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'size'; b.textContent = s;
     b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
+    const left = leftOf(p, s);
+    if (left <= 0) { b.disabled = true; b.classList.add('out'); b.title = 'Esgotado'; }
     b.addEventListener('click', () => {
       chosen = s; $('#pError').textContent = '';
+      $('#pLeft').textContent = left <= 3 && left !== Infinity ? (left === 1 ? 'Última unidade deste tamanho.' : 'Últimas ' + left + ' unidades deste tamanho.') : '';
       box.querySelectorAll('.size').forEach(x => x.setAttribute('aria-checked', String(x === b)));
       const w = $('#pWhats');
       w.href = waLink(orderText([{ id: p.id, size: s, qty: 1 }], 'Pode me enviar o valor do frete e o link do Mercado Pago para pagar?'));
@@ -265,15 +274,17 @@ function openProduct(id) {
   showLayer($('#productLayer'), '.size');
 }
 $('#pBuy').addEventListener('click', () => {
-  if (current.soldOut) { $('#pError').textContent = 'Peça esgotada no momento. Chame no WhatsApp para saber da reposição.'; return; }
+  if (outNow(current)) { $('#pError').textContent = 'Peça esgotada no momento. Chame no WhatsApp para saber da reposição.'; return; }
   if (!chosen) { $('#pError').textContent = 'Escolha um tamanho para continuar.'; return; }
-  addToBag(current.id, chosen);
+  const r = addToBag(current.id, chosen);
+  if (r !== true) { $('#pError').textContent = r > 0 ? 'Só temos ' + r + (r === 1 ? ' unidade' : ' unidades') + ' desse tamanho e já estão na sua sacola.' : 'Esse tamanho acabou.'; return; }
   hideLayer(); showLayer($('#bagLayer'), '.close');
 });
 $('#pAdd').addEventListener('click', () => {
-  if (current.soldOut) { $('#pError').textContent = 'Peça esgotada no momento. Chame no WhatsApp para saber da reposição.'; return; }
+  if (outNow(current)) { $('#pError').textContent = 'Peça esgotada no momento. Chame no WhatsApp para saber da reposição.'; return; }
   if (!chosen) { $('#pError').textContent = 'Escolha um tamanho para continuar.'; return; }
-  addToBag(current.id, chosen);
+  const r = addToBag(current.id, chosen);
+  if (r !== true) { $('#pError').textContent = r > 0 ? 'Só temos ' + r + (r === 1 ? ' unidade' : ' unidades') + ' desse tamanho e já estão na sua sacola.' : 'Esse tamanho acabou.'; return; }
   hideLayer(); toast('Adicionado à sacola');
 });
 $('#pWhats').addEventListener('click', e => {
@@ -332,12 +343,13 @@ function renderGrid() {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'card';
     b.setAttribute('aria-label', p.name + ', ' + brl.format(p.price));
-    b.innerHTML = '<span class="media"><img loading="lazy" alt="' + (p.alt || p.name) + '" src="' + p.imgs[0] + '" width="600" height="800"><span class="add">' + (p.soldOut ? 'Esgotado' : '<b>Compre já</b><span>Escolher tamanho</span>') + '</span>' + (p.soldOut ? '<span class="sold">Esgotado</span>' : '') + '</span>' +
+    b.innerHTML = '<span class="media"><img loading="lazy" alt="' + (p.alt || p.name) + '" src="' + p.imgs[0] + '" width="600" height="800"><span class="add">' + (outNow(p) ? 'Esgotado' : '<b>Compre já</b><span>Escolher tamanho</span>') + '</span>' + (outNow(p) ? '<span class="sold">Esgotado</span>' : '') + '</span>' +
       '<span class="info"><span class="cat">' + p.cat + '</span><span class="name">' + p.name + '</span><span class="price">' + priceHtml(p) + '</span></span>';
     b.addEventListener('click', () => openProduct(p.id));
     grid.appendChild(b);
   });
 }
+if (PAY_URL) fetch(PAY_URL + '/estoque').then(r => r.json()).then(j => { AVAIL = j.estoque || {}; renderGrid(); }).catch(() => {});
 $('#sort').addEventListener('change', e => { sort = e.target.value; renderGrid(); });
 
 /* ============ INÍCIO ============ */

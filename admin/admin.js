@@ -53,6 +53,7 @@ function render() {
     const li = document.createElement('li'); li.className = 'pi' + (p.visible === false ? ' off' : '');
     li.innerHTML = '<img alt="" src="' + esc(p.imgs && p.imgs[0] ? imgSrc(p.imgs[0]) : '') + '">' +
       '<div><div class="t">' + esc(p.name) + '</div><div class="m">' + esc(p.cat) + ' · ' + brl.format(p.price) + (p.sizes && p.sizes.length ? ' · ' + esc(p.sizes.join(', ')) : '') + '</div>' +
+      (p.stock && vendasOk() ? '<div class="m stockline">Estoque: ' + p.sizes.map(s => esc(s) + ' ' + availOf(p, s)).join(' · ') + '</div>' : '') +
       '<div class="tags">' + (p.soldOut ? '<span class="tag">Esgotado</span>' : '') + (p.visible === false ? '<span class="tag">Oculto</span>' : '') + (p.mp ? '<span class="tag">Link MP</span>' : '') + '</div></div>' +
       '<div class="acts"><button type="button" data-a="edit">Editar</button><button type="button" data-a="vis">' + (p.visible === false ? 'Mostrar' : 'Ocultar') + '</button>' +
       '<button type="button" data-a="sold">' + (p.soldOut ? 'Marcar disponível' : 'Marcar esgotado') + '</button>' +
@@ -95,6 +96,40 @@ $('#sFree').addEventListener('input', e => { const n = parseMoney(e.target.value
 $('#sWa').addEventListener('input', e => { data.settings.whatsapp = waDigits(e.target.value); setDirty(true); });
 $('#sIg').addEventListener('input', e => { data.settings.instagram = e.target.value.trim(); setDirty(true); });
 
+/* ---------- Estoque ---------- */
+// Vendidas = vendas não canceladas (site + registradas aqui). "stock" guarda o total recebido; disponível = stock - vendidas.
+const sizeKey = s => String(s == null ? '' : s).trim().toUpperCase();
+const vendasOk = () => typeof vState !== 'undefined' && vState === 'ok' && Array.isArray(vendas);
+function soldQty(pid, size) {
+  if (!vendasOk() || !pid) return 0;
+  let n = 0; const k = sizeKey(size);
+  vendas.forEach(v => { if (v.status === 'cancelado') return; (v.items || []).forEach(i => { if (i.pid === pid && sizeKey(i.size) === k) n += Number(i.qty) || 0; }); });
+  return n;
+}
+const availOf = (p, s) => Math.max(0, (Number(p.stock && p.stock[s]) || 0) - soldQty(p.id, s));
+function sizesNow() { return $('#eSizes').value.split(',').map(s => s.trim()).filter(Boolean); }
+function renderStock() {
+  const box = $('#eStock'), d = editing.d, keep = {};
+  box.querySelectorAll('input').forEach(i => { keep[i.dataset.s] = i.value; });
+  box.innerHTML = '';
+  if (!vendasOk() && d.id) { box.innerHTML = '<p class="hint">Carregando as vendas… feche e abra este produto em alguns segundos para ajustar o estoque.</p>'; return; }
+  sizesNow().forEach(s => {
+    const l = document.createElement('label'); l.className = 'stk';
+    const t = document.createElement('span'); t.textContent = s;
+    const i = document.createElement('input'); i.type = 'number'; i.min = '0'; i.step = '1'; i.inputMode = 'numeric'; i.dataset.s = s; i.placeholder = '—';
+    i.value = s in keep ? keep[s] : (d.stock && Number.isFinite(Number(d.stock[s])) ? String(availOf(d, s)) : '');
+    l.append(t, i); box.appendChild(l);
+  });
+}
+function collectStock(d) {
+  const inputs = [...$('#eStock').querySelectorAll('input')];
+  if (!inputs.length) return;                       // vendas ainda não carregaram: mantém como estava
+  if (inputs.every(i => i.value.trim() === '')) { delete d.stock; return; }
+  const st = {};
+  inputs.forEach(i => { const n = Math.max(0, parseInt(i.value, 10) || 0); st[i.dataset.s] = n + soldQty(d.id, i.dataset.s); });
+  d.stock = st;
+}
+
 /* ---------- Editor ---------- */
 function openEditor(i) {
   const p = i >= 0 ? data.products[i] : { id: '', name: '', cat: '', price: null, oldPrice: null, sizes: [], desc: '', imgs: [], mp: '', soldOut: false, visible: true };
@@ -106,7 +141,7 @@ function openEditor(i) {
   $('#eSold').checked = !!d.soldOut; $('#eVis').checked = d.visible !== false; $('#edErr').textContent = '';
   const cats = [...new Set(['Regatas', 'Blusas', 'Vestidos', 'Conjuntos', 'Saias', 'Calças', 'Acessórios', 'Sapatos', 'Brincos', 'Colares', 'Pulseiras', 'Anéis', 'Semijoias', ...data.products.map(x => x.cat)])];
   $('#cats').innerHTML = cats.map(c => '<option value="' + esc(c) + '">').join('');
-  renderPhotos(); $('#edLayer').hidden = false; document.documentElement.style.overflow = 'hidden'; $('#eName').focus();
+  renderStock(); renderPhotos(); $('#edLayer').hidden = false; document.documentElement.style.overflow = 'hidden'; $('#eName').focus();
 }
 function closeEditor() { $('#edLayer').hidden = true; document.documentElement.style.overflow = ''; editing = null; }
 function renderPhotos() {
@@ -151,6 +186,8 @@ $('#edForm').addEventListener('submit', e => {
   if (isNaN(d.price) || d.price <= 0) return err('Informe o preço, por exemplo 59,90.');
   if (!d.imgs.length) return err('Adicione pelo menos uma foto.');
   if (!d.sizes.length) d.sizes = ['Único'];
+  collectStock(d);
+  if (d.stock) d.sizes.forEach(s => { if (!(s in d.stock)) d.stock[s] = soldQty(d.id, s); });
   if (!d.alt) d.alt = d.name;
   if (editing.i >= 0) { d.id = d.id || slug(d.name); data.products[editing.i] = d; }
   else { let id = slug(d.name), n = 2; while (data.products.some(x => x.id === id)) id = slug(d.name) + '-' + n++; d.id = id; data.products.unshift(d); }
@@ -213,3 +250,5 @@ $('#logout').addEventListener('click', () => {
   location.reload();
 });
 if (token) enter(); else $('#login').hidden = false;
+
+$('#eSizes').addEventListener('input', () => { if (editing) renderStock(); });

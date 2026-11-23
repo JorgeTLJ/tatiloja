@@ -111,3 +111,8 @@ select { border: 1px solid var(--line); background: var(--bg); color: var(--ink)
 @media (max-width: 560px) { .rg { grid-template-columns: 1fr 1fr; } .rg .rn, .rg .ru { grid-column: 1 / -1; } }
 .rg button { min-height: 44px; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; cursor: pointer; color: var(--error); }
 .sale a { color: var(--gold); }
+
+.stockgrid { display: flex; flex-wrap: wrap; gap: 10px; }
+.stk { display: grid; gap: 4px; justify-items: center; font-size: 13px; color: var(--muted); }
+.stk input { width: 72px; text-align: center; }
+.stockline { color: var(--gold); }

@@ -14,7 +14,7 @@ function corsHeaders(req, env) {
   const origin = req.headers.get('origin');
   const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   if (origin && allowed.includes(origin)) {
-    return { 'access-control-allow-origin': origin, vary: 'origin', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' };
+    return { 'access-control-allow-origin': origin, vary: 'origin', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' };
   }
   return {};
 }
@@ -29,6 +29,7 @@ export default {
         if (req.headers.get('origin') && !cors['access-control-allow-origin']) throw new HttpError(403, 'Origem não permitida.');
         return json(await checkout(req, env, url), 200, cors);
       }
+      if (url.pathname === '/estoque' && req.method === 'GET') return await estoqueRoute(env, cors);
       if (url.pathname === '/frete' && req.method === 'POST') {
         if (req.headers.get('origin') && !cors['access-control-allow-origin']) throw new HttpError(403, 'Origem não permitida.');
         return json(await freteRoute(req, env), 200, cors);
@@ -58,7 +59,7 @@ async function loadCatalog(env) {
 }
 
 /* ---------------- checkout ---------------- */
-export function priceLines(catalog, body) {
+export function priceLines(catalog, body, avail = null) {
   const byId = new Map((catalog.products || []).map(p => [p.id, p]));
   const rawItems = Array.isArray(body.items) ? body.items : [];
   if (!rawItems.length || rawItems.length > 30) throw new HttpError(400, 'Sua sacola está vazia.');
@@ -72,8 +73,15 @@ export function priceLines(catalog, body) {
     if (!Number.isInteger(qty) || qty < 1 || qty > 10) throw new HttpError(400, 'Quantidade inválida.');
     return { pid: p.id, name: p.name, size, qty, price: cents(p.price) };
   });
+  const want = {};
+  for (const l of lines) {
+    const a = avail && avail[l.pid]; if (!a) continue;
+    const k = l.pid + '|' + l.size; want[k] = (want[k] || 0) + l.qty;
+    const left = Number(a[l.size]) || 0;
+    if (left <= 0) throw new HttpError(400, '"' + l.name + '" (tam. ' + l.size + ') acabou. Atualize a página e escolha outro tamanho.');
+    if (want[k] > left) throw new HttpError(400, 'Só restam ' + left + (left === 1 ? ' unidade' : ' unidades') + ' de "' + l.name + '" (tam. ' + l.size + ').');
+  }
   const subtotal = cents(lines.reduce((n, l) => n + l.qty * l.price, 0));
-
   return { lines, subtotal };
 }
 
@@ -112,13 +120,15 @@ async function checkout(req, env, url) {
   let body; try { body = await req.json(); } catch (_) { throw new HttpError(400, 'Pedido inválido.'); }
   if (!env.MP_ACCESS_TOKEN) throw new HttpError(503, 'Pagamento ainda não está ativo.');
   const catalog = await loadCatalog(env);
+  const avail = await currentAvailability(env, catalog);
   let quote = null;
   if (body.entrega && body.entrega.tipo === 'entrega') {
-    const { lines, subtotal } = priceLines(catalog, body);
+    const { lines, subtotal } = priceLines(catalog, body, avail);
     const q = await quoteFreight(env, catalog, lines, subtotal, digits(body.entrega.cep));
     if (q.real) quote = q.options;
     else if (['pac', 'sedex'].includes(String(body.entrega.servico || ''))) throw new HttpError(502, 'Não consegui confirmar o frete agora. Tente de novo em instantes.');
   }
+  priceLines(catalog, body, avail);
   const o = priceOrder(catalog, body, quote);
   const orderId = 'P' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
   const site = env.SITE_URL;
@@ -147,6 +157,50 @@ async function checkout(req, env, url) {
     throw new HttpError(502, 'Não consegui iniciar o pagamento agora. Tente de novo ou peça pelo WhatsApp.');
   }
   return { url: data.init_point, orderId, total: o.total };
+}
+
+/* ---------------- estoque ---------------- */
+const sizeKey = s => String(s == null ? '' : s).trim().toUpperCase();
+// Peças vendidas (pagas ou aguardando pagamento) por produto e tamanho. Vendas canceladas devolvem a peça ao estoque.
+export function soldMap(vendas) {
+  const m = {};
+  for (const v of vendas || []) {
+    if (v.status === 'cancelado') continue;
+    for (const i of v.items || []) { if (!i.pid) continue; const k = i.pid + '|' + sizeKey(i.size); m[k] = (m[k] || 0) + (Number(i.qty) || 0); }
+  }
+  return m;
+}
+// Só entram produtos com controle de estoque (campo "stock": total recebido por tamanho). Os demais não têm limite.
+export function availability(catalog, sold) {
+  const out = {};
+  for (const p of catalog.products || []) {
+    if (!p.stock || typeof p.stock !== 'object') continue;
+    out[p.id] = {};
+    for (const s of p.sizes || []) {
+      const total = Number(p.stock[s]);
+      out[p.id][s] = Math.max(0, (Number.isFinite(total) ? total : 0) - (sold[p.id + '|' + sizeKey(s)] || 0));
+    }
+  }
+  return out;
+}
+async function readSales(env) {
+  const g = await gh(env, '/contents/vendas.json');
+  if (g.status === 404) return [];
+  if (!g.ok) throw new Error('GitHub (ler) respondeu ' + g.status);
+  return (JSON.parse(b64ToUtf8((await g.json()).content)).vendas) || [];
+}
+async function currentAvailability(env, catalog) {
+  if (!(catalog.products || []).some(p => p.stock && typeof p.stock === 'object')) return null;
+  try { return availability(catalog, soldMap(await readSales(env))); }
+  catch (e) { console.error('estoque indisponível, vendendo sem limite', e && e.message); return null; }
+}
+async function estoqueRoute(env, cors) {
+  const cache = typeof caches !== 'undefined' && caches.default, key = new Request(env.SITE_URL + '/__estoque');
+  if (cache) { const hit = await cache.match(key); if (hit) return new Response(hit.body, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', ...cors } }); }
+  const catalog = await loadCatalog(env);
+  const body = JSON.stringify({ estoque: (await currentAvailability(env, catalog)) || {} });
+  if (cache) await cache.put(key, new Response(body, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=20' } }));
+  return new Response(body, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', ...cors } });
 }
 
 /* ---------------- frete (Melhor Envio) ---------------- */

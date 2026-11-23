@@ -326,3 +326,6 @@ footer p a { color: var(--gold); text-decoration: underline; text-underline-offs
 
 .pay-on .btn.payonly[hidden], .pay-on .sum.payonly[hidden] { display: none; }
 #bagFoot.combinar #checkout { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
+
+.size.out, .size:disabled { opacity: .45; text-decoration: line-through; cursor: not-allowed; }
+.left { margin: 8px 0 0; font-size: 13px; color: var(--gold); min-height: 1.2em; }

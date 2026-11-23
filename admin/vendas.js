@@ -21,6 +21,7 @@ async function vload() {
       try { await gh('', { repo: VREPO }); vendas = []; vsha = ''; vState = 'ok'; } catch (e2) { vState = 'setup'; }
     } else vState = (e.status === 401 || e.status === 403) ? 'setup' : 'error';
   }
+  try { if (vState === 'ok' && typeof render === 'function' && typeof data !== 'undefined' && data && !(typeof editing !== 'undefined' && editing)) render(); } catch (_) {}
 }
 async function vsave(msg) {
   const r = await put(VPATH, toB64(JSON.stringify({ v: 1, vendas }, null, 2) + '\n'), msg, vsha, VREPO);

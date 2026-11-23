@@ -128,3 +128,37 @@ console.log('TUDO OK');
   globalThis.fetch = realFetch;
   console.log('ok 4 cotação de frete: PAC/SEDEX, preço confirmado no servidor, plano B pela tabela');
 }
+
+// ---- estoque ----
+{
+  const { soldMap, availability } = await import('../src/index.js');
+  const cat = { products: [{ id: 'a', sizes: ['P', 'M'], stock: { P: 3, M: 1 } }, { id: 'b', sizes: ['U'] }] };
+  const sold = soldMap([
+    { status: 'pago', items: [{ pid: 'a', size: 'p', qty: 1 }] },
+    { status: 'pendente', items: [{ pid: 'a', size: 'P', qty: 1 }] },
+    { status: 'cancelado', items: [{ pid: 'a', size: 'P', qty: 5 }] },
+    { status: 'pago', items: [{ pid: 'a', size: 'M', qty: 1 }, { pid: 'b', size: 'U', qty: 9 }] }]);
+  assert.deepEqual(availability(cat, sold), { a: { P: 1, M: 0 } });   // cancelada devolve; b sem controle fica de fora
+  // checkout recusa acima do estoque e aceita dentro dele
+  const saved = JSON.stringify(catalog.products); const savedStore = store; const savedSha = sha;
+  catalog.products.find(p => p.id === 'regata').stock = { P: 2, M: 2 };
+  store = JSON.stringify({ v: 1, vendas: [{ id: 'x1', status: 'pago', items: [{ pid: 'regata', size: 'M', qty: 1 }] }, { id: 'x2', status: 'cancelado', items: [{ pid: 'regata', size: 'M', qty: 9 }] }] });
+  const ret = { items: [{ id: 'regata', size: 'M', qty: 1 }], cliente: base.cliente, entrega: { tipo: 'retirada' } };
+  prefs.length = 0;
+  let r4 = await post('/checkout', ret); assert.equal(r4.status, 200);                                   // resta 1 de M
+  r4 = await post('/checkout', { ...ret, items: [{ id: 'regata', size: 'M', qty: 2 }] }); assert.equal(r4.status, 400);
+  assert.match((await r4.json()).error, /Só restam 1 unidade/);
+  store = JSON.stringify({ v: 1, vendas: [{ id: 'x1', status: 'pendente', items: [{ pid: 'regata', size: 'M', qty: 2 }] }] });
+  r4 = await post('/checkout', ret); assert.equal(r4.status, 400); assert.match((await r4.json()).error, /acabou/);
+  r4 = await post('/checkout', { ...ret, items: [{ id: 'regata', size: 'P', qty: 2 }] }); assert.equal(r4.status, 200);   // P intacto
+  // rota pública de disponibilidade
+  r4 = await call('/estoque', { headers: { origin: 'https://site.test' } }); const j4 = await r4.json();
+  assert.equal(r4.status, 200); assert.deepEqual(j4.estoque, { regata: { P: 2, M: 0 } });
+  assert.equal(r4.headers.get('access-control-allow-origin'), 'https://site.test');
+  // GitHub fora do ar: vende sem limite, não trava
+  const f0 = globalThis.fetch; globalThis.fetch = async (u, o) => String(u).includes('api.github.com') ? new Response('{}', { status: 500 }) : f0(u, o);
+  r4 = await post('/checkout', { ...ret, items: [{ id: 'regata', size: 'M', qty: 3 }] }); assert.equal(r4.status, 200);
+  globalThis.fetch = f0;
+  catalog.products = JSON.parse(saved); store = savedStore; sha = savedSha;
+  console.log('ok 5 estoque: vendas pagas/pendentes baixam, canceladas devolvem, checkout recusa excesso, rota /estoque, plano B');
+}
