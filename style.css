@@ -321,3 +321,5 @@ html.w-open, html.w-open body { overflow: hidden; }
 .fopt input { accent-color: var(--gold); width: 18px; height: 18px; }
 .fopt b { display: block; font-weight: 600; font-size: 15px; }
 .fopt small { color: var(--muted); font-size: 13px; }
+
+footer p a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; line-height: 1.9; }
