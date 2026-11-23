@@ -45,11 +45,11 @@ function orderText(items, extra) {
 }
 
 function checkoutText() {
-  const retira = $('#fShip').value === 'retirada', cep = $('#fCep').value.trim(), nome = $('#fName').value.trim();
-  let extra = 'Entrega: ' + (retira ? 'Retirar na loja' : 'Receber em casa' + (cep ? ' · CEP ' + cep : ''));
+  const mode = $('#fShip').value, retira = mode === 'retirada', combinar = mode === 'combinar', cep = $('#fCep').value.trim(), nome = $('#fName').value.trim();
+  let extra = 'Entrega: ' + (retira ? 'Retirar na loja' : combinar ? 'Quero combinar a entrega com vocês' : 'Receber em casa' + (cep ? ' · CEP ' + cep : ''));
   if (nome) extra += '\nNome: ' + nome;
-  extra += retira
-    ? '\n\nPode me enviar o link do Mercado Pago para pagar?'
+  extra += retira || combinar
+    ? (combinar ? '\n\nPode me passar as opções de entrega, o valor do frete e o link do Mercado Pago para pagar?' : '\n\nPode me enviar o link do Mercado Pago para pagar?')
     : '\n\nPode me enviar o valor do frete e o link do Mercado Pago para pagar?';
   return orderText(bag, extra);
 }
@@ -83,7 +83,7 @@ const digits = v => String(v || '').replace(/\D/g, '');
 let quote = null, quoteKey = '', quoteSel = '';
 function quoteKeyNow() {
   const cep = digits($('#fCep').value), uf = $('#fUf').value.trim().toUpperCase();
-  if (cep.length !== 8 || uf.length !== 2 || !bag.length || $('#fShip').value === 'retirada') return '';
+  if (cep.length !== 8 || uf.length !== 2 || !bag.length || $('#fShip').value !== 'entrega') return '';
   return cep + '|' + uf + '|' + bag.map(i => i.id + ':' + i.size + ':' + i.qty).join(',');
 }
 async function fetchQuote() {
@@ -104,7 +104,7 @@ async function fetchQuote() {
 }
 function renderFreteOpts() {
   const box = $('#freteOpts'); box.innerHTML = '';
-  const retira = $('#fShip').value === 'retirada';
+  const retira = $('#fShip').value !== 'entrega';
   box.hidden = retira || !quote || !!quote.loading || !!quote.erro || quote.opcoes.length < 2;
   if (box.hidden) return;
   quote.opcoes.forEach(o => {
@@ -119,6 +119,7 @@ function renderFreteOpts() {
 }
 function freteInfo() {
   if ($('#fShip').value === 'retirada') return { ok: true, valor: 0, regiao: 'Retirar na loja' };
+  if ($('#fShip').value === 'combinar') return { ok: true, valor: 0, regiao: 'A combinar' };
   const uf = $('#fUf').value.trim().toUpperCase();
   if (uf.length !== 2) return { ok: false, msg: 'informe o CEP' };
   if (quote && quote.loading) return { ok: false, msg: 'calculando…', espera: true };
@@ -130,15 +131,17 @@ function freteInfo() {
   return { ok: true, valor: gratis ? 0 : Number(reg.preco) || 0, regiao: reg.nome, prazo: reg.prazo, gratis };
 }
 function updateCheckout() {
-  const sub = bagTotal(), retira = $('#fShip').value === 'retirada', empty = bag.length === 0;
-  $('#cepBox').hidden = retira; $('#addrBox').hidden = !PAY_URL || retira;
+  const mode = $('#fShip').value, sub = bagTotal(), retira = mode === 'retirada', combinar = mode === 'combinar', empty = bag.length === 0;
+  $('#cepBox').hidden = retira || combinar; $('#addrBox').hidden = !PAY_URL || retira || combinar;
+  $('#payBtn').hidden = combinar; $('#freteRow').hidden = combinar; $('#bagFoot').classList.toggle('combinar', combinar);
   $('#subtotal').textContent = brl.format(sub);
   let total = sub, note = '';
   if (PAY_URL) {
     const f = freteInfo();
     $('#freteVal').textContent = f.ok ? (f.valor === 0 ? 'Grátis' : brl.format(f.valor)) + (f.regiao && !retira ? ' · ' + f.regiao : '') : f.msg;
     total = sub + (f.ok ? f.valor : 0);
-    if (retira) note = 'Retire na loja depois da confirmação do pagamento.';
+    if (combinar) note = 'Vamos combinar a entrega, o frete e o pagamento pelo WhatsApp.';
+    else if (retira) note = 'Retire na loja depois da confirmação do pagamento.';
     else if (f.ok && f.prazo) note = 'Prazo estimado: ' + f.prazo + '.';
     else if (FRETE.gratisAcima && sub < FRETE.gratisAcima) note = 'Frete grátis em compras acima de ' + brl.format(FRETE.gratisAcima) + '.';
   } else note = 'O frete é somado ao final, no WhatsApp. Lá você recebe o link do Mercado Pago com o valor total.';
@@ -182,7 +185,7 @@ $('#fCep').addEventListener('input', e => {
 $('#fUf').addEventListener('input', e => { e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase(); });
 $('#bagFoot').addEventListener('submit', async e => {
   e.preventDefault();
-  if (!PAY_URL || !bag.length) return;
+  if (!PAY_URL || !bag.length || $('#fShip').value === 'combinar') return;
   const err = m => { $('#coErr').textContent = m; }; err('');
   const nome = $('#fName').value.trim(), tel = digits($('#fTel').value), mail = $('#fMail').value.trim();
   if (nome.length < 2) return err('Informe seu nome.');

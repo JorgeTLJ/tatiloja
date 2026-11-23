@@ -323,3 +323,6 @@ html.w-open, html.w-open body { overflow: hidden; }
 .fopt small { color: var(--muted); font-size: 13px; }
 
 footer p a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; line-height: 1.9; }
+
+.pay-on .btn.payonly[hidden], .pay-on .sum.payonly[hidden] { display: none; }
+#bagFoot.combinar #checkout { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
