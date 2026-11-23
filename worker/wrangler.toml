@@ -14,7 +14,13 @@ MAX_INSTALLMENTS = "6"
 # "1" recusa avisos do Mercado Pago com assinatura inválida (ligar depois de confirmar que funciona).
 STRICT_SIGNATURE = "0"
 
+# CEP da loja (origem do frete): Rua Doutor Ferreira Lopes, 659.
+ORIGIN_CEP = "04671011"
+# Contato técnico enviado ao Melhor Envio (opcional; e-mail da loja).
+ME_CONTACT = ""
+
 # Segredos (NÃO ficam aqui; são criados no painel da Cloudflare):
 #   MP_ACCESS_TOKEN     token de produção do Mercado Pago
 #   MP_WEBHOOK_SECRET   chave secreta dos avisos (webhooks) do Mercado Pago
 #   GH_TOKEN            token do GitHub com acesso só ao repositório tldados
+#   ME_TOKEN            token do Melhor Envio (cotação de frete PAC/SEDEX); sem ele vale a tabela de regiões

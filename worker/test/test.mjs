@@ -88,3 +88,43 @@ env.STRICT_SIGNATURE = '0';
 r = await call('/checkout', { method: 'OPTIONS', headers: { origin: 'https://site.test' } }); assert.equal(r.status, 204); assert.equal(r.headers.get('access-control-allow-origin'), 'https://site.test');
 console.log('ok 5 ignorados, assinatura estrita, CORS');
 console.log('TUDO OK');
+
+// ---- cotação de frete (Melhor Envio simulado) ----
+{
+  const realFetch = globalThis.fetch; let meCalls = [], meMode = 'ok';
+  globalThis.fetch = async (u, o = {}) => {
+    if (String(u) === 'https://melhorenvio.com.br/api/v2/me/shipment/calculate') {
+      meCalls.push({ h: o.headers, b: JSON.parse(o.body) });
+      if (meMode === 'erro') return new Response('{"message":"x"}', { status: 500 });
+      return new Response(JSON.stringify([
+        { id: 1, name: 'PAC', price: '22.10', custom_price: '21.40', delivery_time: 6, custom_delivery_time: 6, company: { name: 'Correios' } },
+        { id: 2, name: 'SEDEX', price: '40.00', custom_price: '38.50', delivery_time: 2, custom_delivery_time: 2, company: { name: 'Correios' } },
+        { id: 3, name: '.Package', price: '15.00', custom_price: '15.00', delivery_time: 5, company: { name: 'Correios' } },
+        { id: 4, name: '.Com', price: '0', error: 'Serviço indisponível', company: { name: 'Correios' } }]), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return realFetch(u, o);
+  };
+  const envME = { ...env, ME_TOKEN: 'mt', ORIGIN_CEP: '04671-011', ME_CONTACT: 'dono@loja.test' };
+  const callME = (p, b) => worker.fetch(new Request('https://api.test' + p, { method: 'POST', body: JSON.stringify(b), headers: { 'content-type': 'application/json', origin: 'https://site.test' } }), envME);
+  const q = { items: [{ id: 'regata', size: 'M', qty: 2 }], cep: '01310-100', uf: 'SP' };
+  let rs = await callME('/frete', q); let js = await rs.json();
+  assert.equal(rs.status, 200); assert.equal(js.fonte, 'cotacao');
+  assert.deepEqual(js.opcoes.map(o => [o.id, o.preco, o.prazo]), [['pac', 21.4, '7 dias úteis'], ['sedex', 38.5, '3 dias úteis']]);
+  const sent = meCalls[0]; assert.equal(sent.b.from.postal_code, '04671011'); assert.equal(sent.b.to.postal_code, '01310100');
+  assert.equal(sent.b.products[0].weight, 1); assert.equal(sent.b.products[0].height, 10); assert.equal(sent.b.products[0].insurance_value, 119.8);
+  assert.match(sent.h['user-agent'], /dono@loja.test/); assert.equal(sent.h.authorization, 'Bearer mt');
+  // checkout cobra o serviço escolhido, não o preço do navegador
+  const ck = { items: [{ id: 'regata', size: 'M', qty: 1 }], cliente: base.cliente, entrega: { ...base.entrega, servico: 'sedex' } };
+  prefs.length = 0; rs = await callME('/checkout', ck); js = await rs.json();
+  assert.equal(rs.status, 200); assert.equal(prefs[0].items.find(i => i.id === 'frete').unit_price, 38.5); assert.equal(js.total, 98.4);
+  rs = await callME('/checkout', { ...ck, entrega: { ...ck.entrega, servico: 'xx' } }); assert.equal(rs.status, 400);
+  // erro do Melhor Envio: /frete cai na tabela; checkout com PAC/SEDEX recusa
+  meMode = 'erro';
+  rs = await callME('/frete', q); js = await rs.json(); assert.equal(js.fonte, 'tabela'); assert.deepEqual(js.opcoes.map(o => [o.id, o.preco]), [['tabela', 18]]);
+  rs = await callME('/checkout', ck); assert.equal(rs.status, 502);
+  rs = await callME('/checkout', { ...ck, entrega: { ...ck.entrega, servico: 'tabela' } }); assert.equal(rs.status, 200);
+  // sem token: tabela, como antes
+  rs = await post('/frete', q); js = await rs.json(); assert.equal(js.fonte, 'tabela');
+  globalThis.fetch = realFetch;
+  console.log('ok 4 cotação de frete: PAC/SEDEX, preço confirmado no servidor, plano B pela tabela');
+}

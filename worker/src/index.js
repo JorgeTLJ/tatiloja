@@ -29,6 +29,10 @@ export default {
         if (req.headers.get('origin') && !cors['access-control-allow-origin']) throw new HttpError(403, 'Origem não permitida.');
         return json(await checkout(req, env, url), 200, cors);
       }
+      if (url.pathname === '/frete' && req.method === 'POST') {
+        if (req.headers.get('origin') && !cors['access-control-allow-origin']) throw new HttpError(403, 'Origem não permitida.');
+        return json(await freteRoute(req, env), 200, cors);
+      }
       if (url.pathname === '/webhook' && (req.method === 'POST' || req.method === 'GET')) return await webhook(req, env, url);
       if (url.pathname === '/') return json({ ok: true, service: 'tatiloja-api' }, 200, cors);
       return json({ error: 'Não encontrado.' }, 404, cors);
@@ -54,7 +58,7 @@ async function loadCatalog(env) {
 }
 
 /* ---------------- checkout ---------------- */
-export function priceOrder(catalog, body) {
+export function priceLines(catalog, body) {
   const byId = new Map((catalog.products || []).map(p => [p.id, p]));
   const rawItems = Array.isArray(body.items) ? body.items : [];
   if (!rawItems.length || rawItems.length > 30) throw new HttpError(400, 'Sua sacola está vazia.');
@@ -70,6 +74,11 @@ export function priceOrder(catalog, body) {
   });
   const subtotal = cents(lines.reduce((n, l) => n + l.qty * l.price, 0));
 
+  return { lines, subtotal };
+}
+
+export function priceOrder(catalog, body, quote = null) {
+  const { lines, subtotal } = priceLines(catalog, body);
   const c = body.cliente || {}, e = body.entrega || {};
   const cliente = { nome: clean(c.nome, 80), telefone: digits(c.telefone), email: clean(c.email, 120).toLowerCase() };
   if (cliente.nome.length < 2) throw new HttpError(400, 'Informe seu nome.');
@@ -84,11 +93,17 @@ export function priceOrder(catalog, body) {
   } else {
     endereco = { cep: digits(e.cep), rua: clean(e.rua, 120), numero: clean(e.numero, 20), compl: clean(e.compl, 60), bairro: clean(e.bairro, 80), cidade: clean(e.cidade, 80), uf: clean(e.uf, 2).toUpperCase() };
     if (endereco.cep.length !== 8 || !endereco.rua || !endereco.numero || !endereco.bairro || !endereco.cidade || !UFS.includes(endereco.uf)) throw new HttpError(400, 'Confira o endereço de entrega.');
-    const reg = (cfg.regioes || []).find(r => (r.ufs || []).map(x => String(x).toUpperCase()).includes(endereco.uf));
-    if (!reg) throw new HttpError(400, 'Ainda não entregamos nesse estado. Escolha retirar na loja ou chame no WhatsApp.');
-    regiao = reg.nome;
-    frete = cents(reg.preco);
-    if (cfg.gratisAcima && subtotal >= Number(cfg.gratisAcima)) frete = 0;
+    if (quote && quote.length) {
+      const op = quote.find(x => x.id === String(e.servico || ''));
+      if (!op) throw new HttpError(400, 'Escolha a forma de entrega (PAC ou SEDEX).');
+      regiao = op.nome; frete = cents(op.preco);
+    } else {
+      const reg = (cfg.regioes || []).find(r => (r.ufs || []).map(x => String(x).toUpperCase()).includes(endereco.uf));
+      if (!reg) throw new HttpError(400, 'Ainda não entregamos nesse estado. Escolha retirar na loja ou chame no WhatsApp.');
+      regiao = reg.nome;
+      frete = cents(reg.preco);
+      if (cfg.gratisAcima && subtotal >= Number(cfg.gratisAcima)) frete = 0;
+    }
   }
   return { lines, subtotal, frete, regiao, tipo, cliente, endereco, total: cents(subtotal + frete) };
 }
@@ -97,7 +112,14 @@ async function checkout(req, env, url) {
   let body; try { body = await req.json(); } catch (_) { throw new HttpError(400, 'Pedido inválido.'); }
   if (!env.MP_ACCESS_TOKEN) throw new HttpError(503, 'Pagamento ainda não está ativo.');
   const catalog = await loadCatalog(env);
-  const o = priceOrder(catalog, body);
+  let quote = null;
+  if (body.entrega && body.entrega.tipo === 'entrega') {
+    const { lines, subtotal } = priceLines(catalog, body);
+    const q = await quoteFreight(env, catalog, lines, subtotal, digits(body.entrega.cep));
+    if (q.real) quote = q.options;
+    else if (['pac', 'sedex'].includes(String(body.entrega.servico || ''))) throw new HttpError(502, 'Não consegui confirmar o frete agora. Tente de novo em instantes.');
+  }
+  const o = priceOrder(catalog, body, quote);
   const orderId = 'P' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
   const site = env.SITE_URL;
   const tel = o.cliente.telefone.replace(/^55(?=\d{10,11}$)/, '');
@@ -125,6 +147,60 @@ async function checkout(req, env, url) {
     throw new HttpError(502, 'Não consegui iniciar o pagamento agora. Tente de novo ou peça pelo WhatsApp.');
   }
   return { url: data.init_point, orderId, total: o.total };
+}
+
+/* ---------------- frete (Melhor Envio) ---------------- */
+const ME_URL = 'https://melhorenvio.com.br/api/v2/me/shipment/calculate';
+const SERVICOS = { 1: 'PAC', 2: 'SEDEX' };
+
+export function packageFor(cfg, lines) {
+  const emb = cfg.embalagem || {};
+  const qty = lines.reduce((n, l) => n + l.qty, 0);
+  const c = Number(emb.comprimento) || 30, l = Number(emb.largura) || 25, a = Number(emb.altura) || 8;
+  const peso = Number(emb.pesoKg) || 0.5;
+  return { length: c, width: l, height: Math.min(100, a + (qty - 1) * (Number(emb.alturaExtra) || 2)), weight: Math.max(0.1, Math.round(peso * qty * 1000) / 1000) };
+}
+
+export async function quoteFreight(env, catalog, lines, subtotal, cep) {
+  const cfg = (catalog.settings && catalog.settings.frete) || {};
+  if (!env.ME_TOKEN || !env.ORIGIN_CEP || cep.length !== 8) return { real: false, options: [] };
+  try {
+    const p = packageFor(cfg, lines);
+    const ua = 'Tati Loja (' + (env.ME_CONTACT || 'tatiloja.com.br') + ')';
+    const r = await fetch(ME_URL, {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + env.ME_TOKEN, accept: 'application/json', 'content-type': 'application/json', 'user-agent': ua },
+      body: JSON.stringify({ from: { postal_code: digits(env.ORIGIN_CEP) }, to: { postal_code: cep }, services: '1,2',
+        products: [{ id: 'pacote', width: p.width, height: p.height, length: p.length, weight: p.weight, insurance_value: Math.max(1, cents(subtotal)), quantity: 1 }], options: { receipt: false, own_hand: false } }),
+    });
+    const data = await r.json().catch(() => null);
+    if (!r.ok || !Array.isArray(data)) { console.error('melhor envio recusou', r.status, JSON.stringify(data).slice(0, 300)); return { real: false, options: [] }; }
+    const extra = Number(cfg.diasPreparo); const prep = Number.isFinite(extra) ? extra : 1;
+    let options = data.filter(x => SERVICOS[x.id] && !x.error && Number(x.custom_price != null ? x.custom_price : x.price) > 0).map(x => {
+      const dias = Number(x.custom_delivery_time != null ? x.custom_delivery_time : x.delivery_time);
+      return { id: SERVICOS[x.id].toLowerCase(), nome: SERVICOS[x.id], preco: cents(x.custom_price != null ? x.custom_price : x.price), prazo: Number.isFinite(dias) && dias > 0 ? (dias + prep) + ' dias úteis' : '' };
+    });
+    options.sort((a, b) => a.preco - b.preco);
+    if (options.length && cfg.gratisAcima && subtotal >= Number(cfg.gratisAcima)) {
+      const min = options[0].preco; options = options.map(o => ({ ...o, preco: cents(o.preco - min) }));
+    }
+    return { real: options.length > 0, options };
+  } catch (e) { console.error('melhor envio falhou', e && e.message); return { real: false, options: [] }; }
+}
+
+async function freteRoute(req, env) {
+  let body; try { body = await req.json(); } catch (_) { throw new HttpError(400, 'Pedido inválido.'); }
+  const catalog = await loadCatalog(env);
+  const { lines, subtotal } = priceLines(catalog, body);
+  const cep = digits(body.cep), uf = clean(body.uf, 2).toUpperCase();
+  if (cep.length !== 8) throw new HttpError(400, 'Informe o CEP.');
+  const q = await quoteFreight(env, catalog, lines, subtotal, cep);
+  if (q.real) return { fonte: 'cotacao', opcoes: q.options };
+  const cfg = (catalog.settings && catalog.settings.frete) || {};
+  const reg = (cfg.regioes || []).find(r => (r.ufs || []).map(x => String(x).toUpperCase()).includes(uf));
+  if (!reg) throw new HttpError(400, 'Ainda não entregamos nesse estado. Escolha retirar na loja ou chame no WhatsApp.');
+  const gratis = cfg.gratisAcima && subtotal >= Number(cfg.gratisAcima);
+  return { fonte: 'tabela', opcoes: [{ id: 'tabela', nome: reg.nome, preco: gratis ? 0 : cents(reg.preco), prazo: reg.prazo || '' }] };
 }
 
 /* ---------------- webhook ---------------- */

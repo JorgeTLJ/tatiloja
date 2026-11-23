@@ -80,10 +80,50 @@ function renderBag() {
 
 /* ============ FRETE E TOTAL ============ */
 const digits = v => String(v || '').replace(/\D/g, '');
+let quote = null, quoteKey = '', quoteSel = '';
+function quoteKeyNow() {
+  const cep = digits($('#fCep').value), uf = $('#fUf').value.trim().toUpperCase();
+  if (cep.length !== 8 || uf.length !== 2 || !bag.length || $('#fShip').value === 'retirada') return '';
+  return cep + '|' + uf + '|' + bag.map(i => i.id + ':' + i.size + ':' + i.qty).join(',');
+}
+async function fetchQuote() {
+  const key = quoteKeyNow();
+  if (key === quoteKey) return;
+  quoteKey = key; quote = key ? { loading: true } : null; quoteSel = '';
+  if (!key) return renderFreteOpts();
+  renderFreteOpts();
+  try {
+    const r = await fetch(PAY_URL + '/frete', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ items: bag.map(i => ({ id: i.id, size: i.size, qty: i.qty })), cep: digits($('#fCep').value), uf: $('#fUf').value.trim().toUpperCase() }) });
+    const j = await r.json().catch(() => ({}));
+    if (key !== quoteKey) return;
+    quote = r.ok && j.opcoes ? { opcoes: j.opcoes } : { erro: j.error || 'Não consegui calcular o frete agora. Tente de novo.', bloqueia: r.status === 400 };
+  } catch (_) { if (key !== quoteKey) return; quote = { erro: 'Sem conexão para calcular o frete. Tente de novo.' }; }
+  if (quote.opcoes) quoteSel = quote.opcoes[0].id;
+  renderFreteOpts(); updateCheckout();
+}
+function renderFreteOpts() {
+  const box = $('#freteOpts'); box.innerHTML = '';
+  const retira = $('#fShip').value === 'retirada';
+  box.hidden = retira || !quote || !!quote.loading || !!quote.erro || quote.opcoes.length < 2;
+  if (box.hidden) return;
+  quote.opcoes.forEach(o => {
+    const l = document.createElement('label'); l.className = 'fopt';
+    const r = document.createElement('input'); r.type = 'radio'; r.name = 'fservico'; r.value = o.id; r.checked = o.id === quoteSel;
+    r.addEventListener('change', () => { quoteSel = o.id; updateCheckout(); });
+    const t = document.createElement('span'); t.innerHTML = '<b></b><small></small>';
+    t.querySelector('b').textContent = o.nome + ' · ' + (o.preco === 0 ? 'Grátis' : brl.format(o.preco));
+    t.querySelector('small').textContent = o.prazo ? 'Chega em cerca de ' + o.prazo : '';
+    l.append(r, t); box.appendChild(l);
+  });
+}
 function freteInfo() {
   if ($('#fShip').value === 'retirada') return { ok: true, valor: 0, regiao: 'Retirar na loja' };
   const uf = $('#fUf').value.trim().toUpperCase();
   if (uf.length !== 2) return { ok: false, msg: 'informe o CEP' };
+  if (quote && quote.loading) return { ok: false, msg: 'calculando…', espera: true };
+  if (quote && quote.erro) return { ok: false, msg: quote.erro, bloqueia: !!quote.bloqueia };
+  if (quote && quote.opcoes) { const o = quote.opcoes.find(x => x.id === quoteSel) || quote.opcoes[0]; return { ok: true, valor: o.preco, regiao: o.nome, prazo: o.prazo, servico: o.id }; }
   const reg = (FRETE.regioes || []).find(r => (r.ufs || []).map(x => String(x).toUpperCase()).includes(uf));
   if (!reg) return { ok: false, msg: 'não entregamos nesse estado', bloqueia: true };
   const gratis = !!FRETE.gratisAcima && bagTotal() >= Number(FRETE.gratisAcima);
@@ -103,6 +143,7 @@ function updateCheckout() {
     else if (FRETE.gratisAcima && sub < FRETE.gratisAcima) note = 'Frete grátis em compras acima de ' + brl.format(FRETE.gratisAcima) + '.';
   } else note = 'O frete é somado ao final, no WhatsApp. Lá você recebe o link do Mercado Pago com o valor total.';
   $('#totalVal').textContent = brl.format(total); $('#coNote').textContent = note;
+  if (PAY_URL) fetchQuote();
   const co = $('#checkout');
   if (empty) { co.removeAttribute('href'); co.setAttribute('aria-disabled', 'true'); }
   else { co.href = waLink(checkoutText()); co.removeAttribute('aria-disabled'); }
@@ -149,10 +190,11 @@ $('#bagFoot').addEventListener('submit', async e => {
   if (!/^\S+@\S+\.\S+$/.test(mail)) return err('Informe um e-mail válido.');
   let entrega = { tipo: 'retirada' };
   if ($('#fShip').value !== 'retirada') {
-    entrega = { tipo: 'entrega', cep: digits($('#fCep').value), rua: $('#fRua').value.trim(), numero: $('#fNum').value.trim(), compl: $('#fCompl').value.trim(), bairro: $('#fBairro').value.trim(), cidade: $('#fCidade').value.trim(), uf: $('#fUf').value.trim().toUpperCase() };
+    entrega = { tipo: 'entrega', servico: quoteSel || undefined, cep: digits($('#fCep').value), rua: $('#fRua').value.trim(), numero: $('#fNum').value.trim(), compl: $('#fCompl').value.trim(), bairro: $('#fBairro').value.trim(), cidade: $('#fCidade').value.trim(), uf: $('#fUf').value.trim().toUpperCase() };
     if (entrega.cep.length !== 8) return err('Informe o CEP.');
     if (!entrega.rua || !entrega.numero || !entrega.bairro || !entrega.cidade || entrega.uf.length !== 2) return err('Complete o endereço de entrega.');
     const f = freteInfo();
+    if (f.espera) return err('Aguarde o cálculo do frete.');
     if (!f.ok) return err(f.bloqueia ? 'Ainda não entregamos nesse estado. Escolha retirar na loja ou chame no WhatsApp.' : 'Confira o endereço de entrega.');
   }
   const btn = $('#payBtn'); btn.disabled = true; btn.textContent = 'Abrindo o Mercado Pago…';

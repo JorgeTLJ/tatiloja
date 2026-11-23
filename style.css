@@ -314,3 +314,10 @@ html.w-open, html.w-open body { overflow: hidden; }
 .tools { padding-bottom: 6px; }
 @media (max-width: 720px) { .switch { width: 100%; justify-content: flex-end; padding-top: 4px; } }
 @media (max-width: 720px) { .chip { padding: 6px 14px; min-height: 36px; font-size: 13px; } .tools { gap: 8px 12px; } }
+
+.freteopts { display: grid; gap: 8px; margin: 4px 0 10px; }
+.fopt { display: flex; gap: 12px; align-items: center; border: 1px solid var(--gold-line); border-radius: 14px; padding: 12px 14px; background: var(--surface); cursor: pointer; }
+.fopt:has(input:checked) { background: var(--pink); border-color: var(--gold); }
+.fopt input { accent-color: var(--gold); width: 18px; height: 18px; }
+.fopt b { display: block; font-weight: 600; font-size: 15px; }
+.fopt small { color: var(--muted); font-size: 13px; }

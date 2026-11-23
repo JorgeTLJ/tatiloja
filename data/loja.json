@@ -62,7 +62,15 @@
           "preco": 45,
           "prazo": ""
         }
-      ]
+      ],
+      "embalagem": {
+        "comprimento": 30,
+        "largura": 25,
+        "altura": 8,
+        "alturaExtra": 2,
+        "pesoKg": 0.5
+      },
+      "diasPreparo": 1
     },
     "semijoiasCats": [
       "Brincos",
