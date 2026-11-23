@@ -12,36 +12,36 @@
 </head>
 <body>
 
+<section class="welcome" id="welcome" aria-label="Boas-vindas">
+  <div class="w-card">
+    <img class="w-logo" id="welcomeLogo" alt="Tati Loja: silhueta feminina com colar dourado" width="480" height="600">
+    <p class="w-eyebrow">Moda feminina e semijoias</p>
+    <h1 class="w-title">O que você quer <em>ver</em> hoje?</h1>
+    <div class="w-actions">
+      <button class="w-btn primary" type="button" data-enter="Roupas"><span>Ver roupas</span></button>
+      <button class="w-btn" type="button" data-enter="Semijoias"><span>Ver semijoias</span></button>
+      <button class="w-btn" type="button" data-enter="Todos"><span>Ver tudo</span></button>
+    </div>
+    <a class="w-whats" id="welcomeWhats" href="https://wa.me/" target="_blank" rel="noopener">Prefere falar com a gente? Chame no WhatsApp</a>
+  </div>
+</section>
+
 
 <div class="strip"><div class="in"><span>Frete PAC e SEDEX para todo o Brasil</span><span>Pagamento pelo Mercado Pago</span><span>Atendimento pelo WhatsApp</span></div></div>
 
 <header class="top">
   <div class="in">
-    <a class="brand" href="#topo"><b>Tati Loja</b><small>Moda feminina</small></a>
+    <a class="brand" href="#topo" data-go="home"><b>Tati Loja</b><small>Moda feminina</small></a>
     <nav aria-label="Principal">
-      <a href="#catalogo">Catálogo</a>
-      <a href="#semijoias">Semijoias</a>
+      <button type="button" data-go="home">Início</button>
+      <button type="button" data-go="Roupas">Roupas</button>
+      <button type="button" data-go="Semijoias">Semijoias</button>
     </nav>
     <button class="bag" id="bagBtn" type="button" aria-haspopup="dialog">Sacola <span class="n" id="bagCount">0</span></button>
   </div>
 </header>
 
 <main id="topo">
-  <section class="hero">
-    <div class="in">
-      <div class="hero-copy">
-        <p class="eyebrow">Roupas e semijoias</p>
-        <h1>Moda feminina com a <em>elegância</em> do dia a dia</h1>
-        <p class="lead">Escolha suas peças, monte a sacola e finalize pelo WhatsApp. O pagamento é feito pelo Mercado Pago, em Pix ou cartão, e o envio sai por PAC ou SEDEX.</p>
-        <div class="hero-cta">
-          <a class="btn" href="#catalogo">Ver o catálogo</a>
-          <a class="btn ghost" id="heroWhats" href="https://wa.me/" target="_blank" rel="noopener">Falar no WhatsApp</a>
-        </div>
-      </div>
-      <div class="hero-logo"><img id="logoImg" alt="Tati Loja: silhueta feminina com colar dourado" width="480" height="600"></div>
-    </div>
-  </section>
-
   <section id="catalogo">
     <div class="in">
       <div class="sec-head">

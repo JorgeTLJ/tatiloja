@@ -237,7 +237,8 @@ $('#pWhats').addEventListener('click', e => {
 
 /* ============ VITRINE ============ */
 let filter = 'Todos', sort = 'new';
-const cats = ['Todos', ...new Set([...PRODUCTS.map(p => p.cat).filter(c => c !== SEMIJOIAS), SEMIJOIAS])];
+const cats = ['Todos', 'Roupas', SEMIJOIAS];
+const inFilter = p => filter === 'Todos' || (filter === 'Roupas' ? p.cat !== SEMIJOIAS : p.cat === filter);
 
 function renderChips() {
   const box = $('#chips'); box.innerHTML = '';
@@ -257,7 +258,7 @@ function renderGrid() {
       waLink('Olá, Tati Loja! Quero ver as semijoias disponíveis.') + '" target="_blank" rel="noopener">Ver semijoias no WhatsApp</a></div>';
     return;
   }
-  let items = PRODUCTS.filter(p => filter === 'Todos' || p.cat === filter);
+  let items = PRODUCTS.filter(inFilter);
   if (sort === 'asc') items = [...items].sort((a, b) => a.price - b.price);
   if (sort === 'desc') items = [...items].sort((a, b) => b.price - a.price);
   $('#count').textContent = items.length + (items.length === 1 ? ' peça' : ' peças');
@@ -274,8 +275,30 @@ function renderGrid() {
 $('#sort').addEventListener('change', e => { sort = e.target.value; renderGrid(); });
 
 /* ============ INÍCIO ============ */
-$('#logoImg').src = 'img/logo.jpg';
+$('#welcomeLogo').src = 'img/logo.jpg';
 const hello = waLink('Olá, Tati Loja! Vim pelo catálogo e gostaria de ajuda.');
-$('#heroWhats').href = hello; $('#jewelWhats').href = waLink('Olá, Tati Loja! Quero ver as semijoias disponíveis.');
+$('#welcomeWhats').href = hello; $('#jewelWhats').href = waLink('Olá, Tati Loja! Quero ver as semijoias disponíveis.');
 renderChips(); renderGrid(); renderBag();
+
+/* ============ BOAS-VINDAS ============ */
+const welcome = $('#welcome'), root = document.documentElement;
+function showWelcome() {
+  welcome.classList.remove('out'); welcome.hidden = false; root.classList.add('w-open');
+  try { sessionStorage.removeItem('tatiloja.entrou'); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+function enter(f) {
+  filter = f; renderChips(); renderGrid();
+  welcome.classList.add('out'); root.classList.remove('w-open');
+  setTimeout(() => { welcome.hidden = true; }, 450);
+  try { sessionStorage.setItem('tatiloja.entrou', '1'); } catch (e) {}
+  $('#catalogo').scrollIntoView({ block: 'start' }); window.scrollTo(0, 0);
+}
+welcome.querySelectorAll('[data-enter]').forEach(b => b.addEventListener('click', () => enter(b.dataset.enter)));
+document.querySelectorAll('[data-go]').forEach(el => el.addEventListener('click', e => {
+  e.preventDefault();
+  if (el.dataset.go === 'home') showWelcome(); else { filter = el.dataset.go; renderChips(); renderGrid(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+}));
+let seen = false; try { seen = sessionStorage.getItem('tatiloja.entrou') === '1'; } catch (e) {}
+if (seen || location.hash.length > 1) { welcome.hidden = true; } else { root.classList.add('w-open'); }
 }
