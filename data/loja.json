@@ -80,5 +80,27 @@
       "Semijoias"
     ]
   },
-  "products": []
+  "products": [
+    {
+      "id": "teste",
+      "name": "Teste",
+      "cat": "Regatas",
+      "price": 1,
+      "oldPrice": 1,
+      "sizes": [
+        "P"
+      ],
+      "desc": "",
+      "imgs": [
+        "img/teste-mwweo8zf0.jpg"
+      ],
+      "mp": "",
+      "soldOut": false,
+      "visible": true,
+      "stock": {
+        "P": 1
+      },
+      "alt": "Teste"
+    }
+  ]
 }
