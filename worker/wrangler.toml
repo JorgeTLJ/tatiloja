@@ -18,13 +18,12 @@ STRICT_SIGNATURE = "0"
 ORIGIN_CEP = "04671011"
 # Contato técnico enviado ao Melhor Envio (opcional; e-mail da loja).
 ME_CONTACT = ""
-# E-mail que recebe o aviso de venda (precisa ser o e-mail da conta no Resend).
-NOTIFY_EMAIL = ""
 
 # Segredos (NÃO ficam aqui; são criados no painel da Cloudflare):
 #   MP_ACCESS_TOKEN     token de produção do Mercado Pago
 #   MP_WEBHOOK_SECRET   chave secreta dos avisos (webhooks) do Mercado Pago
 #   GH_TOKEN            token do GitHub com acesso só ao repositório tldados
 #   ME_TOKEN            token do Melhor Envio (cotação de frete PAC/SEDEX); sem ele vale a tabela de regiões
+#   NOTIFY_EMAIL        e-mail que recebe o aviso de venda (o mesmo da conta no Resend)
 #   RESEND_API_KEY      chave do Resend (aviso de venda por e-mail)
 #   NTFY_TOPIC          nome secreto do canal no app ntfy (aviso de venda no celular)
