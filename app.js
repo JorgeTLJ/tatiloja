@@ -353,7 +353,7 @@ if (PAY_URL) fetch(PAY_URL + '/estoque').then(r => r.json()).then(j => { AVAIL =
 $('#sort').addEventListener('change', e => { sort = e.target.value; renderGrid(); });
 
 /* ============ INÍCIO ============ */
-$('#welcomeLogo').src = 'img/logo.jpg';
+$('#welcomeLogo').src = 'img/logo.jpg?v=1795631508';
 const hello = waLink('Olá, Tati Loja! Vim pelo catálogo e gostaria de ajuda.');
 $('#welcomeWhats').href = hello; $('#jewelWhats').href = waLink('Olá, Tati Loja! Quero ver as semijoias disponíveis.');
 renderChips(); renderGrid(); renderBag();
