@@ -229,6 +229,7 @@ export async function quoteFreight(env, catalog, lines, subtotal, cep) {
     });
     const data = await r.json().catch(() => null);
     if (!r.ok || !Array.isArray(data)) { console.error('melhor envio recusou', r.status, JSON.stringify(data).slice(0, 300)); return { real: false, options: [] }; }
+    for (const x of data) if (SERVICOS[x.id] && (x.error || !(Number(x.custom_price != null ? x.custom_price : x.price) > 0))) console.warn('melhor envio sem ' + SERVICOS[x.id] + ': ' + String(x.error || 'sem preço').slice(0, 200));
     const extra = Number(cfg.diasPreparo); const prep = Number.isFinite(extra) ? extra : 1;
     let options = data.filter(x => SERVICOS[x.id] && !x.error && Number(x.custom_price != null ? x.custom_price : x.price) > 0).map(x => {
       const dias = Number(x.custom_delivery_time != null ? x.custom_delivery_time : x.delivery_time);
@@ -293,7 +294,10 @@ async function webhook(req, env, url) {
   const r = await fetch('https://api.mercadopago.com/v1/payments/' + encodeURIComponent(dataId), { headers: { authorization: 'Bearer ' + env.MP_ACCESS_TOKEN } });
   if (r.status === 404) return new Response('pagamento desconhecido', { status: 200 });
   if (!r.ok) throw new Error('Mercado Pago respondeu ' + r.status);
-  await recordPayment(await r.json(), env);
+  const done = await recordPayment(await r.json(), env);
+  if (done && done.sale && done.sale.status === 'pago' && !(done.prev && done.prev.status === 'pago')) {
+    try { await notifySale(env, done.sale); } catch (e) { console.error('aviso de venda falhou', e && e.message); }
+  }
   return new Response('ok', { status: 200 });
 }
 
@@ -337,6 +341,25 @@ async function gh(env, path, opts = {}) {
   });
 }
 
+const brl = n => 'R$ ' + (Number(n) || 0).toFixed(2).replace('.', ',');
+export function saleMessage(sale) {
+  const itens = (sale.items || []).map(i => i.qty + 'x ' + i.name + ' (' + i.size + ')').join('; ');
+  const total = (sale.items || []).reduce((n, i) => n + i.qty * i.price, 0) + (sale.frete || 0);
+  const e = sale.entrega || {}, a = e.endereco;
+  const dest = e.tipo === 'retirada' ? 'Retirada na loja' : e.tipo === 'combinar' ? 'Combinar entrega' : a ? [a.rua, a.numero, a.complemento, a.bairro, a.cidade + '/' + a.uf, a.cep].filter(Boolean).join(', ') : (e.regiao || '');
+  const c = sale.contato || {};
+  const titulo = 'Nova venda: ' + brl(total) + ' (' + sale.pay + ')';
+  const corpo = ['Cliente: ' + (sale.cliente || ''), 'Itens: ' + itens, 'Frete: ' + brl(sale.frete) + (e.regiao ? ' · ' + e.regiao : ''), 'Total: ' + brl(total), 'Entrega: ' + dest, 'Telefone: ' + (c.telefone || ''), 'E-mail: ' + (c.email || ''), sale.obs || ''].join('\n');
+  return { titulo, corpo };
+}
+async function notifySale(env, sale) {
+  const { titulo, corpo } = saleMessage(sale);
+  const jobs = [];
+  if (env.NTFY_TOPIC) jobs.push(fetch('https://ntfy.sh/' + encodeURIComponent(env.NTFY_TOPIC), { method: 'POST', headers: { Title: titulo.replace(/[^\x20-\x7E]/g, c => c === 'ç' ? 'c' : '?'), Priority: 'high', Tags: 'shopping_cart' }, body: corpo }).then(r => { if (!r.ok) console.error('ntfy respondeu', r.status); }));
+  if (env.RESEND_API_KEY && env.NOTIFY_EMAIL) jobs.push(fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: 'Tati Loja <onboarding@resend.dev>', to: [env.NOTIFY_EMAIL], subject: titulo, text: corpo }) }).then(async r => { if (!r.ok) console.error('resend respondeu', r.status, (await r.text()).slice(0, 200)); }));
+  await Promise.allSettled(jobs);
+}
+
 async function recordPayment(pay, env) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const g = await gh(env, '/contents/vendas.json');
@@ -346,13 +369,14 @@ async function recordPayment(pay, env) {
     const id = 'site-' + (pay.metadata && pay.metadata.order_id);
     const idx = vendas.findIndex(v => v.id === id);
     const sale = buildSale(pay, idx >= 0 ? vendas[idx] : null);
-    if (!sale || (idx >= 0 && JSON.stringify(sale) === JSON.stringify(vendas[idx]))) return;
+    if (!sale || (idx >= 0 && JSON.stringify(sale) === JSON.stringify(vendas[idx]))) return null;
+    const prev = idx >= 0 ? vendas[idx] : null;
     if (idx >= 0) vendas[idx] = sale; else vendas.push(sale);
     const put = await gh(env, '/contents/vendas.json', {
       method: 'PUT',
       body: JSON.stringify({ message: 'Pedido ' + sale.orderId + ': ' + sale.status, content: utf8ToB64(JSON.stringify({ v: 1, vendas }, null, 2) + '\n'), ...(sha ? { sha } : {}) }),
     });
-    if (put.ok) return;
+    if (put.ok) return { sale, prev };
     if (put.status === 409 || put.status === 422) { await new Promise(r => setTimeout(r, 250 * (attempt + 1) + Math.random() * 250)); continue; }
     throw new Error('GitHub (gravar) respondeu ' + put.status);
   }

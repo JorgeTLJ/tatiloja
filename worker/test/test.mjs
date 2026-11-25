@@ -162,3 +162,25 @@ console.log('TUDO OK');
   catalog.products = JSON.parse(saved); store = savedStore; sha = savedSha;
   console.log('ok 5 estoque: vendas pagas/pendentes baixam, canceladas devolvem, checkout recusa excesso, rota /estoque, plano B');
 }
+
+// ---- aviso de venda ----
+{
+  const { saleMessage } = await import('../src/index.js');
+  const sent = []; const f0 = globalThis.fetch;
+  globalThis.fetch = async (u, o = {}) => { u = String(u); if (u.startsWith('https://ntfy.sh/') || u.startsWith('https://api.resend.com/')) { sent.push({ u, o }); return new Response('{}', { status: 200 }); } return f0(u, o); };
+  env.NTFY_TOPIC = 'seg-topico'; env.RESEND_API_KEY = 're_x'; env.NOTIFY_EMAIL = 'dona@mail.com';
+  store = null; sha = 0;
+  mpPayments['901'] = pay(901, 'pending', { metadata: { ...meta, order_id: 'PN1' } });
+  await hook('901'); assert.equal(sent.length, 0, 'pendente não avisa');
+  mpPayments['901'] = pay(901, 'approved', { metadata: { ...meta, order_id: 'PN1' } });
+  await hook('901'); assert.equal(sent.length, 2, 'pago avisa por ntfy e e-mail');
+  assert.match(sent[0].o.body, /Saia Midi/); assert.equal(JSON.parse(sent[1].o.body).to[0], 'dona@mail.com');
+  await hook('901'); assert.equal(sent.length, 2, 'aviso repetido não reenvia');
+  globalThis.fetch = async (u, o = {}) => { u = String(u); if (u.startsWith('https://ntfy.sh/')) throw new Error('fora do ar'); return f0(u, o); };
+  mpPayments['902'] = pay(902, 'approved', { metadata: { ...meta, order_id: 'PN2' } });
+  const rr = await hook('902'); assert.equal(rr.status, 200, 'falha no aviso não derruba o webhook');
+  assert.equal(JSON.parse(store).vendas.length, 2);
+  assert.match(saleMessage(JSON.parse(store).vendas[0]).titulo, /Nova venda: R\$ 147,90/);
+  globalThis.fetch = f0; delete env.NTFY_TOPIC; delete env.RESEND_API_KEY; delete env.NOTIFY_EMAIL;
+  console.log('ok 6 aviso de venda: só quando paga, ntfy + e-mail, sem repetir, falha não derruba');
+}
